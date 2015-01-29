@@ -1,0 +1,15 @@
+{
+        "snapshot" : {
+		"repos" : "mingnewbie.tistory.com/repositories/snapshots",
+		"userid" : "mingnewbie",
+		"passwd" : "1234"
+	},
+	"release" : {
+		"repos" : "mingnewbie.tistory.com/repositories/release",
+		"userid" : "mingnewbie",
+		"passwd" : "5678"
+	},
+	"component" : {
+		"test":"mingnewbie.tistory.com"
+	}
+}
