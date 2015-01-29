@@ -702,7 +702,7 @@ class HTTPConnectionWithTimeout(httplib.HTTPConnection):
                     # End of difference from httplib.
                 if self.debuglevel > 0:
                     print( "connect: (%s, %s)" % (self.host, self.port) )
-                self.sock.connect
+                self.sock.connect(sa)
             except socket.error as msg:
                 if self.debuglevel > 0:
                     print( 'connect fail:', (self.host, self.port) )
