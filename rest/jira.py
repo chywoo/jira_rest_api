@@ -11,7 +11,7 @@ from restful_lib import Connection
 
 REST_API_URL_POSTFIX = "/rest/api/latest"
 
-jira_debug_level=0
+jira_debug_level = 1
 
 
 class JIRACommon:
@@ -19,7 +19,7 @@ class JIRACommon:
     Common class for JIRA REST API Classes. Don't this class directly. This is a abstract class.
     """
     base_url = ""
-    rest_url = ""
+    rest_url = None
     body = {}
     httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json'}
 
@@ -55,18 +55,25 @@ class JIRACommon:
         if res[u'headers']['status'] != "200":
             print("STATUS == " + res[u'headers']['status'])
 
+        # Clear value of rest_url for reuse.
+        self.rest_url = None
+
         self.body = json.loads(res[u'body'])
         return self.body
 
-    def value(self, keystring):
+    def value(self, keystring = None):
         """
         Get value from JSON format data. Input key path(key1/key2/key3) and get the value.
         :param keystring: Key path
         :return: Value
         """
-        keys = keystring.split("/")
+
+        if keystring == None:
+            return self.body
 
         result = self.body
+
+        keys = keystring.split("/")
 
         for key in keys:
             if isinstance( result, dict):
@@ -88,7 +95,7 @@ class JIRAIssue(JIRACommon):
         self.request()
 
         if jira_debug_level > 0:
-            print "[REST DEBUG] Retrived issue data: ",  self.body
+            print "[REST DEBUG] Retrived issue data: ", self.body
 
     @property
     def key(self):
@@ -96,6 +103,13 @@ class JIRAIssue(JIRACommon):
 
     def create(self, project_id, summary, issuetype, assignee = None, priority = None, description = None ):
         pass
+
+    def retrieve_issue_types(self):
+        self.setRESTURL("/issuetype")
+        self.request()
+
+        if jira_debug_level > 0:
+            print "[REST DEBUG] Retrived issue types", self.body
 
 
 class JIRAFactory:
