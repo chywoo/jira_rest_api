@@ -10,6 +10,7 @@ def test_JIRAIssue():
 
 
     print("Key: " + issue.key)
+    print "Key2: ", issue.value("fields/comment/comments/0/updateAuthor/displayName")
 
 
 test_JIRAIssue()

@@ -11,6 +11,8 @@ from restful_lib import Connection
 
 REST_API_URL_POSTFIX = "/rest/api/latest"
 
+jira_debug_level=0
+
 
 class JIRACommon:
     """
@@ -18,6 +20,7 @@ class JIRACommon:
     """
     base_url = ""
     rest_url = ""
+    json_data = {}
     httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json'}
 
 
@@ -41,11 +44,10 @@ class JIRACommon:
          Make full REST URL. This is overwrite previous REST URL.
         :param resource_url: resource URL for REST API
         """
-        self.rest_url = self.base_url + resource_url
+        self.rest_url = resource_url
 
 
-    @property
-    def connect(self):
+    def request(self):
         assert(self.rest_url and self.rest_url != "")
 
         global res, body
@@ -53,10 +55,31 @@ class JIRACommon:
         res = conn.request(self.rest_url, headers=self.httpHeaders, args={})
 
         if res[u'headers']['status'] != "200":
-            raise False
+            print("STATUS == " + res[u'headers']['status'])
 
         body = json.loads(res[u'body'])
         return body
+
+    def value(self, keystring):
+        """
+        Get value from JSON format data. Input key path(key1/key2/key3) and get the value.
+        :param keystring: Key path
+        :return: Value
+        """
+        keys = keystring.split("/")
+
+        result = self.json_data
+
+        for key in keys:
+            if isinstance( result, dict):
+                result = result[key]
+            elif isinstance( result, list):
+                try:
+                    result = result[int(key)]
+                except ValueError as e:
+                    raise KeyError("'%s' is not index value of List. Type of the value is List. Index must be integer." % key)
+
+        return result
 
 
 
@@ -65,14 +88,20 @@ class JIRAIssue(JIRACommon):
 
 
     def retrieve(self, issue_key):
-        global issue_data
+        global json_data
 
         self.setRESTURL(self.RESOURCE_BASE_URL + issue_key)
-        issue_data = self.connect()
+        self.json_data = self.request()
+
+        if jira_debug_level > 0:
+            print "[REST DEBUG] Retrived issue data: ",  self.json_data
+            print "Keys: ", self.json_data.keys();
 
     @property
     def key(self):
-        return self.issue_data[u'key']
+        return self.json_data[u'key']
+
+
 
 
 class JIRAFactory:
