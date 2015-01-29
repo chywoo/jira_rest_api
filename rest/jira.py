@@ -20,7 +20,7 @@ class JIRACommon:
     """
     base_url = ""
     rest_url = ""
-    json_data = {}
+    body = {}
     httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json'}
 
 
@@ -31,7 +31,6 @@ class JIRACommon:
 
         # Make HTTP authorization key. Connection class has ID and password params but doesn't work.
         self.httpHeaders["Authorization"] = "Basic " + base64.b64encode(id.strip() + ":" + password.strip())
-        #self.httpHeaders["Authorization"] = "Basic Y2h5d29vLnBhcms6dGl6ZW5zZGsqMTA="
 
         # Make connection to REST server. This is a JUST connection.
         base_url.strip()
@@ -46,19 +45,18 @@ class JIRACommon:
         """
         self.rest_url = resource_url
 
-
     def request(self):
         assert(self.rest_url and self.rest_url != "")
 
-        global res, body
+        global res
 
         res = conn.request(self.rest_url, headers=self.httpHeaders, args={})
 
         if res[u'headers']['status'] != "200":
             print("STATUS == " + res[u'headers']['status'])
 
-        body = json.loads(res[u'body'])
-        return body
+        self.body = json.loads(res[u'body'])
+        return self.body
 
     def value(self, keystring):
         """
@@ -68,7 +66,7 @@ class JIRACommon:
         """
         keys = keystring.split("/")
 
-        result = self.json_data
+        result = self.body
 
         for key in keys:
             if isinstance( result, dict):
@@ -81,27 +79,23 @@ class JIRACommon:
 
         return result
 
-
-
 class JIRAIssue(JIRACommon):
     RESOURCE_BASE_URL="/issue/"
 
 
     def retrieve(self, issue_key):
-        global json_data
-
         self.setRESTURL(self.RESOURCE_BASE_URL + issue_key)
-        self.json_data = self.request()
+        self.request()
 
         if jira_debug_level > 0:
-            print "[REST DEBUG] Retrived issue data: ",  self.json_data
-            print "Keys: ", self.json_data.keys();
+            print "[REST DEBUG] Retrived issue data: ",  self.body
 
     @property
     def key(self):
-        return self.json_data[u'key']
+        return self.value('key')
 
-
+    def create(self, project_id, summary, issuetype, assignee = None, priority = None, description = None ):
+        pass
 
 
 class JIRAFactory:
