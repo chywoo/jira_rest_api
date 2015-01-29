@@ -12,5 +12,11 @@ def test_JIRAIssue():
     print("Key: " + issue.key)
     print "Key2: ", issue.value("fields/comment/comments/0/updateAuthor/displayName")
 
+def test_JIRAIssueType():
+    issue = factory.createIssue(TEST_BASE_URL, 'chywoo.park', 'tizensdk*10')
+    issue.retrieve_issue_types()
+    print "Issue type: ", issue.value()
+
 
 test_JIRAIssue()
+test_JIRAIssueType()
