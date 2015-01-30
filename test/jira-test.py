@@ -1,30 +1,36 @@
 __author__ = 'chywoo.park'
 import jira
 
-TEST_BASE_URL = "http://jira.score"
+TEST_BASE_URL = "http://172.21.17.95:8080"
+SPIN_BASE_URL = "http://172.21.17.95:8080"
+SCORE_BASE_URL = "http://localhost:2990/jira"
+
 factory = jira.JIRAFactory()
 
 
 def test_JIRAIssue():
-    issue = factory.createIssue(TEST_BASE_URL, 'chywoo.park', 'tizensdk*10')
-    issue.retrieve_issue("TS-17952")
+    print
+    print "="*80
+    issue = factory.createIssue(TEST_BASE_URL, 'chywoo.park', 'chywoo.park')
+    issue.retrieve_issue("TS-17674")
 
     print("Key: " + issue.key)
-    print "Key2: ", issue.value("fields/comment/comments/0/updateAuthor/displayName")
+    print "Key2: ", issue.value("fields/comment")
 
 
 def test_JIRAIssueType():
-    issue = factory.createIssue(TEST_BASE_URL, 'chywoo.park', 'tizensdk*10')
+    print
+    print "="*80
+    issue = factory.createIssue(TEST_BASE_URL, 'chywoo.park', 'chywoo.park')
     issue.retrieve_issue_types()
     print "Issue type: ", issue.value()
 
 
 def test_MultiUse():
-    SPIN_SERVER_BASE_URL = "http://localhost:2990/jira"
-    SCORE_SERVER_BASE_URL = "http://172.21.17.95:8080"
-
-    score_issue = factory.createIssue(SCORE_SERVER_BASE_URL, 'chywoo.park', 'chywoo.park')
-    spin_issue = factory.createIssue(SPIN_SERVER_BASE_URL, 'admin', 'admin')
+    print
+    print "="*80
+    score_issue = factory.createIssue(SCORE_BASE_URL, 'admin', 'admin')
+    spin_issue = factory.createIssue(SPIN_BASE_URL, 'chywoo.park', 'chywoo.park')
 
     status = score_issue.retrieve_issue_types()
     print "SCORE STATUS : ", status
@@ -32,7 +38,16 @@ def test_MultiUse():
     status = spin_issue.retrieve_issue_types()
     print "SPIN  STATUS : ", status
 
+def test_search():
+    print
+    print "="*80
+    issue = factory.createIssue(SCORE_BASE_URL, 'admin', 'admin')
+    issue.retrieve_search('project=TEST')
+
+    print "Issue list: ", issue.value()
+
 
 test_JIRAIssue()
 test_JIRAIssueType()
 test_MultiUse()
+test_search()

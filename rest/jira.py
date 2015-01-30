@@ -90,7 +90,12 @@ class JIRACommon:
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
         self.log("HTTP Request headers :", self.httpHeaders)
 
-        self.res = self.conn.request(self.rest_url, headers=self.httpHeaders, args={})
+        try:
+            self.res = self.conn.request(self.rest_url, headers=self.httpHeaders, args={})
+        except Exception as ex:
+            print ex
+
+            return None
 
         self.log("HTTP Response status : " + self.res[u'headers']['status'])
 
@@ -110,7 +115,7 @@ class JIRACommon:
         :return: Value
         """
 
-        if keystring == None:
+        if keystring is None:
             return self.body
 
         result = self.body
@@ -118,9 +123,9 @@ class JIRACommon:
         keys = keystring.split("/")
 
         for key in keys:
-            if isinstance( result, dict):
+            if isinstance(result, dict):
                 result = result[key]
-            elif isinstance( result, list):
+            elif isinstance(result, list):
                 try:
                     result = result[int(key)]
                 except ValueError as e:
@@ -151,7 +156,7 @@ class JIRAIssue(JIRACommon):
         return self.retrieve(resource_url)
 
     def retrieve_search(self, jql):
-        resource_url = "/search?jql=" + jql
+        resource_url = "/search?jql=" + jql # TODO special character(=, space, ...) must be processed.
 
         return self.retrieve(resource_url)
 
