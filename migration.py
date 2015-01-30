@@ -10,15 +10,28 @@ SCORE_SERVER_BASE_URL = "http://localhost:2990/jira"
 factory = jira.JIRAFactory()
 
 spin_issue = factory.createIssue(SPIN_SERVER_BASE_URL, 'chywoo.park', 'chywoo.park')
-spin_issue.retrieve_search("project=TS")
-
-data = util.VersatileDict(spin_issue.value())
-print spin_issue.value()
-
-issue_count =  int(data.value("total"))
-data.data = data.value("issues")
+startAt = 0
+total_count = 0
 
 print ("Key\t\t\tIssueType\tSummary")
 
-for i in range(issue_count):
-    print( "%s\t%-8s\t%s" % ( data.value(str(i)+ "/key"), data.value(str(i) + "/fields/issuetype/name"), data.value(str(i) + "/fields/summary")))
+loop = True
+while loop:
+    print("="*30)
+    spin_issue.retrieve_search("project=TS&maxResults=100&startAt=" + str(startAt))
+
+    data = util.VersatileDict(spin_issue.value())
+
+    total_count = int(data.value("total"))
+    data.data = data.value("issues")
+
+    for i in range(100):
+        if i + startAt >= total_count:
+            loop = False
+            break
+
+        print( "%d:%d  %s\t%-8s\t%s" % ( i + startAt, i, data.value(str(i)+ "/key"), data.value(str(i) + "/fields/issuetype/name"), data.value(str(i) + "/fields/summary")))
+
+    startAt += 100
+
+print "END" * 10
