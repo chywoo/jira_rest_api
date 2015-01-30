@@ -128,32 +128,39 @@ class JIRACommon:
 
         return result
 
+
 class JIRAIssue(JIRACommon):
-    RESOURCE_BASE_URL="/issue/"
+    RESOURCE_BASE_URL = "/issue/"
 
-
-    def retrieve(self, issue_key):
-        self.setRESTURL(self.RESOURCE_BASE_URL + issue_key)
+    def retrieve(self, resource_url):
+        self.setRESTURL(resource_url)
         status = self.request()
 
-        self.log("Retrived issue data: ", self.body)
+        self.log(resource_url + " : ", self.body)
 
         return status
 
-    @property
-    def key(self):
-        return self.value('key')
+    def retrieve_issue(self, issue_key):
+        resource_url = self.RESOURCE_BASE_URL + issue_key
+
+        return self.retrieve(resource_url)
+
+    def retrieve_issue_types(self):
+        resource_url = "/issuetype"
+
+        return self.retrieve(resource_url)
+
+    def retrieve_search(self, jql):
+        resource_url = "/search?jql=" + jql
+
+        return self.retrieve(resource_url)
 
     def create(self, project_id, summary, issuetype, assignee=None, priority=None, description=None ):
         pass
 
-    def retrieve_issue_types(self):
-        self.setRESTURL("/issuetype")
-        status = self.request()
-
-        self.log("Retrived issue types", self.body)
-
-        return status
+    @property
+    def key(self):
+        return self.value('key')
 
 
 class JIRAFactory:
@@ -168,5 +175,3 @@ class JIRAFactory:
 
     def createIssue(self, url, id, password):
         return JIRAIssue(url, id, password, self.debug_level)
-
-
