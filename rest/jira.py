@@ -1,27 +1,34 @@
 __author__ = 'chywoo.park'
 
+import sys
+
 if __name__ == "__main__":
-    pass
+    sys.exit()
 
 import json
 import base64
 
 from restful_lib import Connection
+import httplib2
 
 
 REST_API_URL_POSTFIX = "/rest/api/latest"
-
-jira_debug_level = 0
 
 
 class JIRACommon:
     """
     Common class for JIRA REST API Classes. Don't this class directly. This is a abstract class.
     """
+    id = None
+    password = None
     base_url = ""
     rest_url = None
     body = {}
-    httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json'}
+    conn = None
+    res = None
+    jira_debug_level = 0
+
+    httpHeaders = None
 
     def log(self, *args):
         """
@@ -38,19 +45,33 @@ class JIRACommon:
             print
 
     def __init__(self, base_url, id, password, debug_level):
+        """
+
+        :param base_url:
+        :param id:
+        :param password:
+        :param debug_level: 1 - JIRA log, 2 - JIRA log + HTTP log
+        :return:
+        """
         assert (base_url and id and password and base_url != "" and id != "" and password != "")
         assert (isinstance(id, str) and isinstance(password, str))
-        global conn
 
         self.jira_debug_level = debug_level
 
+        if debug_level > 1:
+            # Set HTTPLIB2's debug level
+            httplib2.debuglevel = debug_level
+
+        self.id = id.strip()
+        self.password = password.strip()
+
         # Make HTTP authorization key. Connection class has ID and password params but doesn't work.
-        self.httpHeaders["Authorization"] = "Basic " + base64.b64encode(id.strip() + ":" + password.strip())
+        self.httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Basic ' + base64.b64encode(self.id + ':' + self.password)}
 
         # Make connection to REST server. This is a JUST connection.
         base_url.strip()
         self.base_url = base_url + REST_API_URL_POSTFIX
-        conn = Connection(self.base_url, id, password)
+        self.conn = Connection(self.base_url, self.id, self.password)
 
     def setRESTURL(self, resource_url):
         """
@@ -60,22 +81,27 @@ class JIRACommon:
         self.rest_url = resource_url
 
     def request(self):
+        """
+        Request REST API Call
+        :return: HTTP status code
+        """
         assert(self.rest_url and self.rest_url != "")
 
-        global res
+        self.log("HTTP Request URL : " + self.base_url + self.rest_url)
+        self.log("HTTP Request headers :", self.httpHeaders)
 
-        res = conn.request(self.rest_url, headers=self.httpHeaders, args={})
+        self.res = self.conn.request(self.rest_url, headers=self.httpHeaders, args={})
 
-        self.log("HTTP Response status : " + res[u'headers']['status'])
+        self.log("HTTP Response status : " + self.res[u'headers']['status'])
 
-        if res[u'headers']['status'] != "200":
-            return None
+        if self.res[u'headers']['status'] != "200":
+            return self.res[u'headers']['status']
 
         # Clear value of rest_url for reuse.
         self.rest_url = None
 
-        self.body = json.loads(res[u'body'])
-        return self.body
+        self.body = json.loads(self.res[u'body'])
+        return self.res[u'headers']['status']
 
     def value(self, keystring = None):
         """
@@ -108,9 +134,11 @@ class JIRAIssue(JIRACommon):
 
     def retrieve(self, issue_key):
         self.setRESTURL(self.RESOURCE_BASE_URL + issue_key)
-        self.request()
+        status = self.request()
 
         self.log("Retrived issue data: ", self.body)
+
+        return status
 
     @property
     def key(self):
@@ -121,13 +149,24 @@ class JIRAIssue(JIRACommon):
 
     def retrieve_issue_types(self):
         self.setRESTURL("/issuetype")
-        self.request()
+        status = self.request()
 
         self.log("Retrived issue types", self.body)
 
+        return status
+
 
 class JIRAFactory:
-    def createIssue(self, url, id, password, debug_level=0):
-        return JIRAIssue(url, id, password, debug_level)
+    debug_level = 0
+
+    def __init__(self, debug_level=0):
+        """
+        :param debug_level: debug_level: 1 - JIRA log, 2 - JIRA log + HTTP log
+        :return:
+        """
+        self.debug_level = debug_level
+
+    def createIssue(self, url, id, password):
+        return JIRAIssue(url, id, password, self.debug_level)
 
 
