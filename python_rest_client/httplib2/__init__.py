@@ -701,18 +701,18 @@ class HTTPConnectionWithTimeout(httplib.HTTPConnection):
                     self.sock.settimeout(self.timeout)
                     # End of difference from httplib.
                 if self.debuglevel > 0:
-                    print( "connect: (%s, %s)" % (self.host, self.port) )
+                    print "connect: (%s, %s)" % (self.host, self.port)
                 self.sock.connect(sa)
-            except socket.error as msg:
+            except socket.error, msg:
                 if self.debuglevel > 0:
-                    print( 'connect fail:', (self.host, self.port) )
+                    print 'connect fail:', (self.host, self.port)
                 if self.sock:
                     self.sock.close()
                 self.sock = None
                 continue
             break
         if not self.sock:
-            raise socket.error(msg)
+            raise socket.error, msg
 
 class HTTPSConnectionWithTimeout(httplib.HTTPSConnection):
     "This class allows communication via SSL."
@@ -734,7 +734,7 @@ class HTTPSConnectionWithTimeout(httplib.HTTPSConnection):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if self.timeout is not None:
             sock.settimeout(self.timeout)
-        sock.connect
+        sock.connect((self.host, self.port))
         ssl = socket.ssl(sock, self.key_file, self.cert_file)
         self.sock = httplib.FakeSocket(sock, ssl)
 
@@ -825,10 +825,10 @@ the same interface as FileCache."""
             except socket.gaierror:
                 conn.close()
                 raise ServerNotFoundError("Unable to find the server at %s" % conn.host)
-            except httplib.HTTPException as e:
+            except httplib.HTTPException, e:
                 if i == 0:
                     conn.close()
-                    conn.connect
+                    conn.connect()
                     continue
                 else:
                     raise
@@ -1048,7 +1048,7 @@ a string that contains the response entity body.
                     content = new_content 
             else: 
                 (response, content) = self._request(conn, authority, uri, request_uri, method, body, headers, redirections, cachekey)
-        except Exception as e:
+        except Exception, e:
             if self.force_exception_to_status_code:
                 if isinstance(e, HttpLib2ErrorWithResponse):
                     response = e.response
@@ -1119,5 +1119,5 @@ class Response(dict):
     def __getattr__(self, name):
         if name == 'dict':
             return self 
-        else:
-            raise AttributeError(name)
+        else:  
+            raise AttributeError, name 
