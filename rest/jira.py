@@ -36,7 +36,6 @@ class JIRACommon:
         base_url.strip()
         self.base_url = base_url + REST_API_URL_POSTFIX
         conn = Connection(self.base_url, id, password)
-        print(conn)
 
     def setRESTURL(self, resource_url):
         """
