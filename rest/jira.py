@@ -19,16 +19,25 @@ class JIRACommon:
     """
     Common class for JIRA REST API Classes. Don't this class directly. This is a abstract class.
     """
+
+    # Variables about HTTP Connection
+    conn = None
     id = None
     password = None
+
+    # HTTP Request variables
     base_url = ""
     rest_url = None
+    httpHeaders = None
+    post_body = None
+    http_args = {}
+
+    # HTTP Response variables.
     body = {}
-    conn = None
     res = None
+
     jira_debug_level = 0
 
-    httpHeaders = None
 
     def log(self, *args):
         """
@@ -43,6 +52,13 @@ class JIRACommon:
                 print message,
 
             print
+
+    def set_post_body(self, body):
+        """
+        Set body data of HTTP POST
+        """
+        self.post_body = body
+
 
     def __init__(self, base_url, id, password, debug_level):
         """
@@ -62,16 +78,26 @@ class JIRACommon:
             # Set HTTPLIB2's debug level
             httplib2.debuglevel = debug_level
 
+        # Initialize HTTP Request variables
+        self.rest_url = None
+        self.post_body = None
+        self.http_args = {}
+
         self.id = id.strip()
         self.password = password.strip()
 
         # Make HTTP authorization key. Connection class has ID and password params but doesn't work.
-        self.httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Basic ' + base64.b64encode(self.id + ':' + self.password)}
+        self.httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json',
+                            'Authorization': 'Basic ' + base64.b64encode(self.id + ':' + self.password)}
 
         # Make connection to REST server. This is a JUST connection.
         base_url.strip()
         self.base_url = base_url + REST_API_URL_POSTFIX
         self.conn = Connection(self.base_url, self.id, self.password)
+
+        # Initialize HTTP Response variables.
+        self.body = {}
+        self.res = None
 
     def setRESTURL(self, resource_url):
         """
@@ -80,26 +106,26 @@ class JIRACommon:
         """
         self.rest_url = resource_url
 
-    def request(self):
+    def request(self, method="get"):
         """
         Request REST API Call
         :return: HTTP status code
         """
-        assert(self.rest_url and self.rest_url != "")
+        assert (self.rest_url and self.rest_url != "")
 
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
         self.log("HTTP Request headers :", self.httpHeaders)
 
         try:
-            self.res = self.conn.request(self.rest_url, headers=self.httpHeaders, args={})
+            self.res = self.conn.request(self.rest_url, method=method, headers=self.httpHeaders, args=self.http_args, body=self.post_body)
         except Exception as ex:
             print ex
-
             return None
 
         self.log("HTTP Response status : " + self.res[u'headers']['status'])
 
         if self.res[u'headers']['status'] != "200":
+            self.log("HTTP response data : ", self.res[u'body'])
             return self.res[u'headers']['status']
 
         # Clear value of rest_url for reuse.
@@ -108,7 +134,15 @@ class JIRACommon:
         self.body = json.loads(self.res[u'body'])
         return self.res[u'headers']['status']
 
-    def value(self, keystring = None):
+
+    def request_get(self):
+        return self.request("get")
+
+    def request_post(self):
+        return self.request("post")
+
+
+    def value(self, keystring=None):
         """
         Get value from JSON format data. Input key path(key1/key2/key3) and get the value.
         :param keystring: Key path
@@ -129,7 +163,8 @@ class JIRACommon:
                 try:
                     result = result[int(key)]
                 except ValueError as e:
-                    raise KeyError("'%s' is not index value of List. Type of the value is List. Index must be integer." % key)
+                    raise KeyError(
+                        "'%s' is not index value of List. Type of the value is List. Index must be integer." % key)
 
         return result
 
@@ -156,12 +191,39 @@ class JIRAIssue(JIRACommon):
         return self.retrieve(resource_url)
 
     def retrieve_search(self, jql):
-        resource_url = "/search?jql=" + jql # TODO special character(=, space, ...) must be processed.
+        resource_url = "/search?jql=" + jql  # TODO special character(=, space, ...) must be processed.
 
         return self.retrieve(resource_url)
 
-    def create(self, project_id, summary, issuetype, assignee=None, priority=None, description=None ):
-        pass
+    def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description=None):
+        req_body = """
+        {
+            "fields": {
+                "project":
+                {
+                    "key": "%s"
+                },
+                "summary": "%s",
+                "description": "DESCRIPTION",
+                "issuetype": {
+                    "name": "%s"
+                }
+            }
+        }
+        """ % (project_id, summary, issuetype)
+
+        self.set_post_body(req_body)
+        self.log("Issue creation json data:\n", self.post_body)
+        resource_url = "/issue/"
+        self.httpHeaders["Content-Type"]="application/json" # FIXME Why does this line inserted?
+
+        self.setRESTURL(resource_url)
+        status = self.request_post()
+
+        self.log(resource_url + " : ", self.body)
+
+        return status
+
 
     @property
     def key(self):

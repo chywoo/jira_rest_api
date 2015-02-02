@@ -5,7 +5,7 @@ TEST_BASE_URL = "http://172.21.17.95:8080"
 SPIN_BASE_URL = "http://172.21.17.95:8080"
 SCORE_BASE_URL = "http://localhost:2990/jira"
 
-factory = jira.JIRAFactory()
+factory = jira.JIRAFactory(2)
 
 
 def test_JIRAIssue():
@@ -46,8 +46,16 @@ def test_search():
 
     print "Issue list: ", issue.value()
 
+def test_create():
+    print
+    print "="*80
+    issue = factory.createIssue(SCORE_BASE_URL, 'admin', 'admin')
+    issue.create_issue("TEST", "Summary", "Task" )
+    print "Issue Info: ", issue.value()
+
 
 test_JIRAIssue()
 test_JIRAIssueType()
 test_MultiUse()
 test_search()
+test_create()

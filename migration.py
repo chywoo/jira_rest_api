@@ -30,7 +30,7 @@ while loop:
             loop = False
             break
 
-        print( "%d:%d  %s\t%-8s\t%s" % ( i + startAt, i, data.value(str(i)+ "/key"), data.value(str(i) + "/fields/issuetype/name"), data.value(str(i) + "/fields/summary")))
+        print("%d:%d  %s\t%-8s\t%s" % (i + startAt, i, data.value(str(i)+"/key"), data.value(str(i) + "/fields/issuetype/name"), data.value(str(i) + "/fields/summary")))
 
     startAt += 100
 
