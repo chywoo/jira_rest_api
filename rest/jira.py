@@ -5,6 +5,10 @@ import sys
 if __name__ == "__main__":
     sys.exit()
 
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+
 import json
 import base64
 
@@ -196,7 +200,7 @@ class JIRAIssue(JIRACommon):
         return self.retrieve(resource_url)
 
     def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description=None):
-        req_body = """
+        req_body = u"""
         {
             "fields": {
                 "project":
