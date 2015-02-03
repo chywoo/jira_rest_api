@@ -120,11 +120,7 @@ class JIRACommon:
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
         self.log("HTTP Request headers :", self.httpHeaders)
 
-        try:
-            self.res = self.conn.request(self.rest_url, method=method, headers=self.httpHeaders, args=self.http_args, body=self.post_body)
-        except Exception as ex:
-            print ex
-            return None
+        self.res = self.conn.request(self.rest_url, method=method, headers=self.httpHeaders, args=self.http_args, body=self.post_body)
 
         self.log("HTTP Response status : " + self.res[u'headers']['status'])
 
