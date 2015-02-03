@@ -1,3 +1,4 @@
+#-*- coding: utf-8 -*-
 __author__ = 'chywoo.park'
 
 import jira
@@ -28,7 +29,7 @@ while loop:
 
     data = util.VersatileDict(source_issue.value())
 
-    total_count = int(data.value("total"))
+    total_count = 10 #int(data.value("total"))
     data.data = data.value("issues")
 
     for i in range(100):
@@ -39,8 +40,6 @@ while loop:
         v_key = data.value(str(i)+"/key")
         v_issuetype = data.value(str(i) + "/fields/issuetype/name")
         v_summary = data.value(str(i) + "/fields/summary")
-
-        time.sleep(0.1)
 
         print("%d:%d  %s\t%-8s\t%s" % (i + startAt, i, v_key, v_issuetype, v_summary))
 
