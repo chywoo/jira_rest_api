@@ -21,6 +21,7 @@ class JIRACommon:
     conn = None
     username = None
     password = None
+    proxies = None
 
     # HTTP Request variables
     base_url = ""
@@ -56,6 +57,10 @@ class JIRACommon:
         """
         if body is not None:
             self.post_body = body.encode(sys.getdefaultencoding())
+
+    def set_proxy(self, proxy):
+        self.proxies = None
+        self.proxies = proxy
 
     def __init__(self):
         pass
@@ -113,22 +118,26 @@ class JIRACommon:
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
         self.log("HTTP Request headers :", self.httpHeaders)
 
+        self.body = None
         self.res = requests.request(method=method,
                                     url=self.base_url + self.rest_url,
                                     headers=self.httpHeaders,
                                     auth=(self.username, self.password), params=self.http_args,
-                                    data=self.post_body)
+                                    data=self.post_body,
+                                    proxies = self.proxies)
 
+        try:
+            self.body = self.res.json()
+        except ValueError:  # Not json format
+            self.body = None
+
+        self.log("HTTP Request URL: %s" % self.res.url)
         self.log("HTTP Response status : %d" % self.res.status_code)
 
-        if self.res.status_code != requests.codes.ok and self.res.status_code != requests.codes.created:
-            print("!!FAIL!! Status Code: %d" % self.res.status_code)
-            print("Message: %s" % self.res.text)
-            return self.res.status_code
-        else:
-            self.log("HTTP response data : %s" % self.res.text)
 
-        self.body = self.res.json()
+        if self.res.status_code == requests.codes.unauthorized:
+            self.log("Status Code: %d, Message: Unauthorized, URL: %s" % (self.res.status_code, self.res.url))
+
         return self.res.status_code
 
 
@@ -171,7 +180,11 @@ class JIRAIssue(JIRACommon):
     def retrieve(self):
         status = self.request()
 
-        self.log(self.rest_url + " : ", self.body)
+        if status != requests.codes.ok:
+            self.log("Fail to get %s, Status Code: %d" % (self.res.url, self.res.status_code))
+            return status
+        else:
+            self.log("HTTP response data : %s" % self.res.text)
 
         return status
 
@@ -185,15 +198,16 @@ class JIRAIssue(JIRACommon):
 
         return self.retrieve()
 
-    def retrieve_search(self, params):
+    def retrieve_search(self, jql, startAt=0, maxResults=50):
         self.setRESTURL("/search")
 
-        for i in params.keys():
-            self.add_url_param(i, params[i])
+        self.add_url_param("jql", jql)
+        self.add_url_param("startAt", str(startAt))
+        self.add_url_param("maxResults", str(maxResults))
 
         return self.retrieve()
 
-    def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description=None):
+    def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description=""):
         req_body = """
         {
             "fields": {
@@ -202,29 +216,36 @@ class JIRAIssue(JIRACommon):
                     "key": "%s"
                 },
                 "summary": "%s",
-                "description": "DESCRIPTION",
+                "description": "%s",
                 "issuetype": {
                     "name": "%s"
                 }
             }
         }
-        """ % (project_id, summary, issuetype)
+        """ % (
+            project_id, summary.replace("\"", "'"),
+            description.replace("\"", "'").replace("\\", "\\\\").replace("\r","\\r").replace("\n","\\n").replace("\t", "\\t"),
+            issuetype)
 
+
+        self.log("Issue creation json data:\n", req_body)
         self.set_post_body(req_body)
-        self.log("Issue creation json data:\n", self.post_body)
 
         if self.httpHeaders is None:
             self.httpHeaders = {}
 
-        self.httpHeaders["Content-Type"]="application/json" # FIXME Why does this line inserted?
+        self.httpHeaders["Content-Type"]="application/json"
 
         self.setRESTURL("/issue")
         status = self.request_post()
 
-        self.log("%s : %s" % (self.rest_url, self.body))
+        if status != requests.codes.created:
+            self.log("Fail to create issue. Status Code: %d, URL: %s" % (status, self.res.url))
+            self.log(self.res.text)
+            return status
+
 
         return status
-
 
     @property
     def key(self):
