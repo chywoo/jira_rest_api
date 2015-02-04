@@ -6,8 +6,10 @@
       <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/rest" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/python_rest_client" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/python_rest_client" />
+      <excludeFolder url="file://$MODULE_DIR$/rest" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 2.7.6 (/System/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.4.2 (/Library/Frameworks/Python.framework/Versions/3.4/bin/python3.4)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
