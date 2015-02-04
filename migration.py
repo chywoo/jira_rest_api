@@ -6,13 +6,20 @@ import jira
 import util
 import time
 
-SRC_SERVER_BASE_URL = "http://172.21.17.95:8080"
-DST_SERVER_BASE_URL = "http://172.21.17.95:2990/jira"
+SRC_SERVER_BASE_URL = "http://168.219.209.56/jira"
+# SRC_SERVER_BASE_URL = "http://172.21.17.95:8080"
+DST_SERVER_BASE_URL = "http://172.21.17.95:8080"
+PROXYS = {
+    'http':'http://172.21.17.105:3128',
+    'https': 'http://172.21.17.105:3128'
+}
 
 factory = jira.JIRAFactory()
 
-source_issue = factory.createIssue(SRC_SERVER_BASE_URL, 'chywoo.park', 'chywoo.park')
-dest_issue = factory.createIssue(DST_SERVER_BASE_URL, 'admin', 'admin')
+source_issue = factory.createIssue(SRC_SERVER_BASE_URL, 'chywoo.park', 'score123')
+source_issue.set_proxy(PROXYS)
+
+dest_issue = factory.createIssue(DST_SERVER_BASE_URL, 'chywoo.park', 'chywoo.park')
 startAt = 0
 total_count = 0
 
@@ -24,19 +31,21 @@ DATA_MAP_TO_DEST = {
 }
 
 loop = True
+
+jql='project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF") AND issuetype in (Bug, DEFECT) AND filter = "S-Core(PSLab) Config_User"'
+
 while loop:
     print("="*30)
 
-    params={'jsql': 'project=TS', 'maxResults': '100', 'startAt': str(startAt)}
+    status = source_issue.retrieve_search(jql=jql, maxResults=100, startAt=startAt)
 
-    status = source_issue.retrieve_search(params)
     if status != 200:
         print("Fail to retrieve issues")
         sys.exit(-1)
 
     data = util.VersatileDict(source_issue.value())
 
-    total_count = 10 #int(data.value("total"))
+    total_count = int(data.value("total"))
     data.data = data.value("issues")
 
     for i in range(100):
@@ -47,10 +56,15 @@ while loop:
         v_key = data.value(str(i)+"/key")
         v_issuetype = data.value(str(i) + "/fields/issuetype/name")
         v_summary = data.value(str(i) + "/fields/summary")
+        v_description = data.value(str(i) + "/fields/description")
 
         print("%d:%d  %s\t%-8s\t%s" % (i + startAt, i, v_key, v_issuetype, v_summary))
 
-        dest_issue.create_issue(DATA_MAP_TO_DEST['project'], v_summary, v_issuetype)
+        result = dest_issue.create_issue(project_id=DATA_MAP_TO_DEST['project'], summary=v_summary, issuetype=v_issuetype, description=v_description)
+        if result != 201:
+            print("##### FAIL TO INSERT #####")
+            print( dest_issue.value() )
+            sys.exit(-1)
 
     startAt += 100
 
