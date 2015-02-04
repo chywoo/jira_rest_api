@@ -185,9 +185,11 @@ class JIRAIssue(JIRACommon):
 
         return self.retrieve()
 
-    def retrieve_search(self, jql):
+    def retrieve_search(self, params):
         self.setRESTURL("/search")
-        self.add_url_param('jql', jql)
+
+        for i in params.keys():
+            self.add_url_param(i, params[i])
 
         return self.retrieve()
 
