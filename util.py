@@ -21,7 +21,7 @@ class VersatileDict:
 
     def __setattr__(self, key, value):
         if self.__dict__.get("_locked") and key == "data":
-            raise AttributeError, "VersatileDict does not allow assignment to .data memeber."
+            raise AttributeError("VersatileDict does not allow assignment to .data memeber.")
         self.__dict__[key] = value
 
     def to_string(self):
