@@ -1,6 +1,7 @@
 #-*- coding: utf-8 -*-
 __author__ = 'chywoo.park'
 
+import sys
 import jira
 import util
 import time
@@ -25,7 +26,13 @@ DATA_MAP_TO_DEST = {
 loop = True
 while loop:
     print("="*30)
-    source_issue.retrieve_search("project=TS&maxResults=100&startAt=" + str(startAt))
+
+    params={'jsql': 'project=TS', 'maxResults': '100', 'startAt': str(startAt)}
+
+    status = source_issue.retrieve_search(params)
+    if status != 200:
+        print("Fail to retrieve issues")
+        sys.exit(-1)
 
     data = util.VersatileDict(source_issue.value())
 
@@ -47,4 +54,4 @@ while loop:
 
     startAt += 100
 
-print "END" * 10
+print("END" * 10)
