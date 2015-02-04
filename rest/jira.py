@@ -5,15 +5,8 @@ import sys
 if __name__ == "__main__":
     sys.exit()
 
-reload(sys)
-sys.setdefaultencoding('utf-8')
-
-
 import json
-import base64
-
-from restful_lib import Connection
-import httplib2
+import requests
 
 
 REST_API_URL_POSTFIX = "/rest/api/latest"
@@ -26,7 +19,7 @@ class JIRACommon:
 
     # Variables about HTTP Connection
     conn = None
-    id = None
+    username = None
     password = None
 
     # HTTP Request variables
@@ -50,54 +43,47 @@ class JIRACommon:
         :return:
         """
         if self.jira_debug_level > 0:
-            print "[REST DEBUG]",
+            print("[REST DEBUG]", end=' ')
 
             for message in args:
-                print message,
+                print(message, end=' ')
 
-            print
+            print()
 
     def set_post_body(self, body):
         """
         Set body data of HTTP POST
         """
-        self.post_body = body
+        if body is not None:
+            self.post_body = body.encode(sys.getdefaultencoding())
 
+    def __init__(self):
+        pass
 
-    def __init__(self, base_url, id, password, debug_level):
+    def __init__(self, base_url, username, password, debug_level):
         """
 
         :param base_url:
-        :param id:
+        :param username:
         :param password:
         :param debug_level: 1 - JIRA log, 2 - JIRA log + HTTP log
         :return:
         """
-        assert (base_url and id and password and base_url != "" and id != "" and password != "")
-        assert (isinstance(id, str) and isinstance(password, str))
+        assert (base_url and username and password and base_url != "" and username != "" and password != "")
+        assert (isinstance(username, str) and isinstance(password, str))
 
         self.jira_debug_level = debug_level
 
-        if debug_level > 1:
-            # Set HTTPLIB2's debug level
-            httplib2.debuglevel = debug_level
-
+        self.username = username
+        self.password = password
         # Initialize HTTP Request variables
         self.rest_url = None
         self.post_body = None
         self.http_args = {}
 
-        self.id = id.strip()
-        self.password = password.strip()
-
-        # Make HTTP authorization key. Connection class has ID and password params but doesn't work.
-        self.httpHeaders = {'Content-type': 'application/json', 'Accept': 'application/json',
-                            'Authorization': 'Basic ' + base64.b64encode(self.id + ':' + self.password)}
-
         # Make connection to REST server. This is a JUST connection.
         base_url.strip()
         self.base_url = base_url + REST_API_URL_POSTFIX
-        self.conn = Connection(self.base_url, self.id, self.password)
 
         # Initialize HTTP Response variables.
         self.body = {}
@@ -108,7 +94,14 @@ class JIRACommon:
          Make full REST URL. This is overwrite previous REST URL.
         :param resource_url: resource URL for REST API
         """
+        self.rest_url = None
         self.rest_url = resource_url
+
+    def add_url_param(self, key, value):
+        """
+        Add URL parameter. ex)search?jql=project=test => 'jql' is key and 'project=test' is value
+        """
+        self.http_args[key] = value
 
     def request(self, method="get"):
         """
@@ -120,19 +113,23 @@ class JIRACommon:
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
         self.log("HTTP Request headers :", self.httpHeaders)
 
-        self.res = self.conn.request(self.rest_url, method=method, headers=self.httpHeaders, args=self.http_args, body=self.post_body)
+        self.res = requests.request(method=method,
+                                    url=self.base_url + self.rest_url,
+                                    headers=self.httpHeaders,
+                                    auth=(self.username, self.password), params=self.http_args,
+                                    data=self.post_body)
 
-        self.log("HTTP Response status : " + self.res[u'headers']['status'])
+        self.log("HTTP Response status : %d" % self.res.status_code)
 
-        if self.res[u'headers']['status'] != "200":
-            self.log("HTTP response data : ", self.res[u'body'])
-            return self.res[u'headers']['status']
+        if self.res.status_code != requests.codes.ok and self.res.status_code != requests.codes.created:
+            print("!!FAIL!! Status Code: %d" % self.res.status_code)
+            print("Message: %s" % self.res.text)
+            return self.res.status_code
+        else:
+            self.log("HTTP response data : %s" % self.res.text)
 
-        # Clear value of rest_url for reuse.
-        self.rest_url = None
-
-        self.body = json.loads(self.res[u'body'])
-        return self.res[u'headers']['status']
+        self.body = self.res.json()
+        return self.res.status_code
 
 
     def request_get(self):
@@ -169,34 +166,33 @@ class JIRACommon:
         return result
 
 
-class JIRAIssue(JIRACommon):
-    RESOURCE_BASE_URL = "/issue/"
 
-    def retrieve(self, resource_url):
-        self.setRESTURL(resource_url)
+class JIRAIssue(JIRACommon):
+    def retrieve(self):
         status = self.request()
 
-        self.log(resource_url + " : ", self.body)
+        self.log(self.rest_url + " : ", self.body)
 
         return status
 
     def retrieve_issue(self, issue_key):
-        resource_url = self.RESOURCE_BASE_URL + issue_key
+        self.setRESTURL("/issue/%s" % issue_key)
 
-        return self.retrieve(resource_url)
+        return self.retrieve()
 
     def retrieve_issue_types(self):
-        resource_url = "/issuetype"
+        self.setRESTURL("/issuetype")
 
-        return self.retrieve(resource_url)
+        return self.retrieve()
 
     def retrieve_search(self, jql):
-        resource_url = "/search?jql=" + jql  # TODO special character(=, space, ...) must be processed.
+        self.setRESTURL("/search")
+        self.add_url_param('jql', jql)
 
-        return self.retrieve(resource_url)
+        return self.retrieve()
 
     def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description=None):
-        req_body = u"""
+        req_body = """
         {
             "fields": {
                 "project":
@@ -214,13 +210,16 @@ class JIRAIssue(JIRACommon):
 
         self.set_post_body(req_body)
         self.log("Issue creation json data:\n", self.post_body)
-        resource_url = "/issue/"
+
+        if self.httpHeaders is None:
+            self.httpHeaders = {}
+
         self.httpHeaders["Content-Type"]="application/json" # FIXME Why does this line inserted?
 
-        self.setRESTURL(resource_url)
+        self.setRESTURL("/issue")
         status = self.request_post()
 
-        self.log(resource_url + " : ", self.body)
+        self.log("%s : %s" % (self.rest_url, self.body))
 
         return status
 
@@ -240,5 +239,5 @@ class JIRAFactory:
         """
         self.debug_level = debug_level
 
-    def createIssue(self, url, id, password):
-        return JIRAIssue(url, id, password, self.debug_level)
+    def createIssue(self, url, username, password):
+        return JIRAIssue(url, username, password, self.debug_level)
