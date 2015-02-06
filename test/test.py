@@ -1,42 +1,37 @@
-__author__ = 'Sungho Park'
+class testclass:
+    message='hello'
+    data={'data1':'DATA ONE'}
 
-import json
-import requests
-from requests.auth import HTTPBasicAuth
+    def __init__(self):
+        self.r=2
 
-# params={'jql':'project=TS', 'maxResults':'100', 'startAt':'0'}
-# r = requests.get("http://172.21.17.95:8080/rest/api/2/search", auth=HTTPBasicAuth('chywoo.park', 'chywoo.park'), params=params)
-#
-# print(r.status_code)
-# print(r.headers)
-# print(type(r.json()))
+    def say(self,name):
+        print('%s, %s' % (name, self.message))
+    def __getitem__(self, item):
+        return self.data[item]
 
-data_p='TEST'
-data_summary='써머리 테스트'
-data_issuetype='Task'
-data_description='디스크립션descritpion'
+    @property
+    def area(self):
+        return self.r * self.r
 
-req_body = """
-{
-    "fields": {
-        "project": {
-            "key": "%s"
-        },
-        "summary": "%s",
-        "description": "%s",
-        "issuetype": {
-            "name": "%s"
-        }
-    }
-}
-""" % (data_p, data_summary, data_description, data_issuetype)
+    @area.setter
+    def area(self, value):
+        self.r=value
 
-data=json.loads(req_body)
-headers={'Content-type': 'application/json'}
+    @area.deleter
+    def area(self):
+        print("Killed")
 
-r = requests.post("http://172.21.17.95:8080/rest/api/2/issue", data=req_body.encode('utf-8'), auth=('chywoo.park','chywoo.park'), headers=headers)
-print(r.status_code)
 
-print(r.text)
-print("URL: ", r.url)
-print("", r.request.body)
+t = testclass()
+setattr(t, 'data1', 'DATA1 value')
+print( t['data1'] )
+print(t.data1)
+t.data1='abc'
+print(t.data1)
+
+print(t.area)
+t.area = 3
+print(t.area)
+
+del t

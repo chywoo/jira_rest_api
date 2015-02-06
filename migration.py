@@ -14,12 +14,12 @@ PROXYS = {
     'https': 'http://172.21.17.105:3128'
 }
 
-factory = jira.JIRAFactory()
+factory = jira.JIRAFactoryBuilder()
 
-source_issue = factory.createIssue(SRC_SERVER_BASE_URL, 'chywoo.park', 'score123')
+source_issue = factory.get_factory(SRC_SERVER_BASE_URL, 'chywoo.park', 'score123')
 source_issue.set_proxy(PROXYS)
 
-dest_issue = factory.createIssue(DST_SERVER_BASE_URL, 'chywoo.park', 'chywoo.park')
+dest_issue = factory.get_factory(DST_SERVER_BASE_URL, 'chywoo.park', 'chywoo.park')
 startAt = 0
 total_count = 0
 
@@ -60,11 +60,11 @@ while loop:
 
         print("%d:%d  %s\t%-8s\t%s" % (i + startAt, i, v_key, v_issuetype, v_summary))
 
-        result = dest_issue.create_issue(project_id=DATA_MAP_TO_DEST['project'], summary=v_summary, issuetype=v_issuetype, description=v_description)
-        if result != 201:
-            print("##### FAIL TO INSERT #####")
-            print( dest_issue.value() )
-            sys.exit(-1)
+        # result = dest_issue.create_issue(project_id=DATA_MAP_TO_DEST['project'], summary=v_summary, issuetype=v_issuetype, description=v_description)
+        # if result != 201:
+        #     print("##### FAIL TO INSERT #####")
+        #     print( dest_issue.value() )
+        #     sys.exit(-1)
 
     startAt += 100
 
