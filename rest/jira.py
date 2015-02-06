@@ -5,8 +5,8 @@ import sys
 if __name__ == "__main__":
     sys.exit()
 
-import json
 import requests
+import util
 
 
 REST_API_URL_POSTFIX = "/rest/api/latest"
@@ -31,8 +31,8 @@ class JIRACommon:
     http_args = {}
 
     # HTTP Response variables.
-    body = {}
     res = None
+    res_body = None
 
     jira_debug_level = 0
 
@@ -91,7 +91,7 @@ class JIRACommon:
         self.base_url = base_url + REST_API_URL_POSTFIX
 
         # Initialize HTTP Response variables.
-        self.body = {}
+        self.res_body = None
         self.res = None
 
     def setRESTURL(self, resource_url):
@@ -118,7 +118,7 @@ class JIRACommon:
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
         self.log("HTTP Request headers :", self.httpHeaders)
 
-        self.body = None
+        self.res_body = None
         self.res = requests.request(method=method,
                                     url=self.base_url + self.rest_url,
                                     headers=self.httpHeaders,
@@ -127,9 +127,9 @@ class JIRACommon:
                                     proxies = self.proxies)
 
         try:
-            self.body = self.res.json()
+            self.res_body = util.VersatileDict(self.res.json())
         except ValueError:  # Not json format
-            self.body = None
+            self.res_body = None
 
         self.log("HTTP Request URL: %s" % self.res.url)
         self.log("HTTP Response status : %d" % self.res.status_code)
@@ -140,13 +140,11 @@ class JIRACommon:
 
         return self.res.status_code
 
-
     def request_get(self):
         return self.request("get")
 
     def request_post(self):
         return self.request("post")
-
 
     def value(self, keystring=None):
         """
@@ -154,25 +152,10 @@ class JIRACommon:
         :param keystring: Key path
         :return: Value
         """
-
-        if keystring is None:
-            return self.body
-
-        result = self.body
-
-        keys = keystring.split("/")
-
-        for key in keys:
-            if isinstance(result, dict):
-                result = result[key]
-            elif isinstance(result, list):
-                try:
-                    result = result[int(key)]
-                except ValueError as e:
-                    raise KeyError(
-                        "'%s' is not index value of List. Type of the value is List. Index must be integer." % key)
-
-        return result
+        if self.res_body is None:
+            return None
+        else:
+            return self.res_body.value(keystring)
 
 
 
