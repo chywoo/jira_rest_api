@@ -42,6 +42,9 @@ class VersatileDict:
         keys = keystring.split("/")
 
         for key in keys:
+            if key == '': # skip blank ex)first '/' at '/fields/description'
+                continue
+
             if isinstance(result, dict):
                 result = result[key]
             elif isinstance(result, list):
