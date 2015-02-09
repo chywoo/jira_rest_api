@@ -11,11 +11,27 @@ import util
 
 REST_API_URL_POSTFIX = "/rest/api/latest"
 
+DEFAULT_JIRA_ISSUE_MAP = {
+    "issuetype": "/fields/issuetype/name",
+    "issuestatus": "/fields/status/name",
+    "key": "/key",
+    "assignee": "/fields/assignee/name",
+    "displayname": "/fields/assignee/displayName",
+    "summary": "/fields/summary",
+    "description": "/fields/description",
+#    "components": "/fields/components/{#}/name",
+    "environment": "/fields/environment",
+#    "fixversions": "/fields/fixVersions/{#}/name",
+    "created": "/fields/created"
+}
 
-class JIRACommon:
+
+class RESTNetwork:
     """
     Common class for JIRA REST API Classes. Don't this class directly. This is a abstract class.
     """
+
+    _is_network_initialized = False     # Check if network facility is initialized.
 
     # Variables about HTTP Connection
     conn = None
@@ -35,7 +51,6 @@ class JIRACommon:
     res_body = None
 
     jira_debug_level = 0
-
 
     def log(self, *args):
         """
@@ -62,8 +77,6 @@ class JIRACommon:
         self.proxies = None
         self.proxies = proxy
 
-    def __init__(self):
-        pass
 
     def __init__(self, base_url, username, password, debug_level):
         """
@@ -94,7 +107,9 @@ class JIRACommon:
         self.res_body = None
         self.res = None
 
-    def setRESTURL(self, resource_url):
+        self._is_network_initialized = True
+
+    def set_resturl(self, resource_url):
         """
          Make full REST URL. This is overwrite previous REST URL.
         :param resource_url: resource URL for REST API
@@ -115,6 +130,9 @@ class JIRACommon:
         """
         assert (self.rest_url and self.rest_url != "")
 
+        if self._is_network_initialized is False:
+            raise ConnectionError("Not initialized yet.")
+
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
         self.log("HTTP Request headers :", self.httpHeaders)
 
@@ -133,7 +151,6 @@ class JIRACommon:
 
         self.log("HTTP Request URL: %s" % self.res.url)
         self.log("HTTP Response status : %d" % self.res.status_code)
-
 
         if self.res.status_code == requests.codes.unauthorized:
             self.log("Status Code: %d, Message: Unauthorized, URL: %s" % (self.res.status_code, self.res.url))
@@ -158,8 +175,36 @@ class JIRACommon:
             return self.res_body.value(keystring)
 
 
+class JIRAFactory(RESTNetwork):
+    _fields_mapping = None
 
-class JIRAIssue(JIRACommon):
+    def __init__(self, base_url, username, password, mapping, debug_level):
+        self._fields_mapping = mapping
+
+        super().__init__(base_url, username, password, debug_level)
+
+    def get_mapping(self):
+        return self._fields_mapping
+
+    def set_mapping(self, mapping):
+        self._fields_mapping = mapping
+
+    def _new_issue_object(self):
+        _issue = Issue(self.base_url, self.username, self.password)
+        return _issue
+
+    def _new_issue_object(self, obj, mapping):
+        _issue = Issue(obj, mapping, self.base_url, self.username, self.password)
+        return _issue
+
+    @property
+    def http_status(self):
+        """
+        return HTTP status code
+        :return: HTTP status code
+        """
+        return self.res.status_code
+
     def retrieve(self):
         status = self.request()
 
@@ -172,25 +217,50 @@ class JIRAIssue(JIRACommon):
         return status
 
     def retrieve_issue(self, issue_key):
-        self.setRESTURL("/issue/%s" % issue_key)
+        self.set_resturl("/issue/%s" % issue_key)
 
-        return self.retrieve()
+        if self.retrieve() == requests.codes.ok:
+            return self._new_issue_object(self.value(), self._fields_mapping)
+        else:
+            return None
 
     def retrieve_issue_types(self):
-        self.setRESTURL("/issuetype")
+        self.set_resturl("/issuetype")
 
         return self.retrieve()
 
-    def retrieve_search(self, jql, startAt=0, maxResults=50):
-        self.setRESTURL("/search")
+    def retrieve_search(self, jql, start_at=0, max_results=50):
+        """
+        Execute JQL.
+
+        :param jql:
+        :param start_at:
+        :param max_results:
+        :return:
+        """
+        self.set_resturl("/search")
 
         self.add_url_param("jql", jql)
-        self.add_url_param("startAt", str(startAt))
-        self.add_url_param("maxResults", str(maxResults))
+        self.add_url_param("startAt", str(start_at))
+        self.add_url_param("maxResults", str(max_results))
 
-        return self.retrieve()
+        if self.retrieve() == requests.codes.ok:
+            return self.value()
+        else:
+            return None
 
     def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description=""):
+        """
+        Create JIRA Issue.
+
+        :param project_id:
+        :param summary:
+        :param issuetype:
+        :param assignee:
+        :param priority:
+        :param description:
+        :return:
+        """
         req_body = """
         {
             "fields": {
@@ -210,16 +280,15 @@ class JIRAIssue(JIRACommon):
             description.replace("\"", "'").replace("\\", "\\\\").replace("\r","\\r").replace("\n","\\n").replace("\t", "\\t"),
             issuetype)
 
-
         self.log("Issue creation json data:\n", req_body)
         self.set_post_body(req_body)
 
         if self.httpHeaders is None:
             self.httpHeaders = {}
 
-        self.httpHeaders["Content-Type"]="application/json"
+        self.httpHeaders["Content-Type"] = "application/json"
 
-        self.setRESTURL("/issue")
+        self.set_resturl("/issue")
         status = self.request_post()
 
         if status != requests.codes.created:
@@ -227,15 +296,10 @@ class JIRAIssue(JIRACommon):
             self.log(self.res.text)
             return status
 
-
         return status
 
-    @property
-    def key(self):
-        return self.value('key')
 
-
-class JIRAFactory:
+class JIRAFactoryBuilder:
     debug_level = 0
 
     def __init__(self, debug_level=0):
@@ -245,5 +309,64 @@ class JIRAFactory:
         """
         self.debug_level = debug_level
 
-    def createIssue(self, url, username, password):
-        return JIRAIssue(url, username, password, self.debug_level)
+    def get_factory(self, url, username, password, mapping=DEFAULT_JIRA_ISSUE_MAP):
+        return JIRAFactory(url, username, password, mapping, self.debug_level)
+
+
+class JIRAFieldsMap:
+    """
+    Map field name and REST api path.
+    See DEFAULT_JIRA-ISSUE_MAP. It is a sample.
+    """
+    def __init__(self, map):
+        if isinstance(map, dict):
+            self.map = map
+        else:
+            raise ValueError("Type of the parameter is not Dictionary.")
+
+    def keys(self):
+        return self.map.keys()
+
+    def value(self, key):
+        return self.map.get(key)
+
+
+class Issue(RESTNetwork):
+    """
+    Contains issue data. This does not provide REST API.
+    Main function is to use JIRA field path as  property. eg) issue.key => issue.vale("fields/key")
+    """
+
+    def __init__(self, obj=None, mapping=DEFAULT_JIRA_ISSUE_MAP, base_url=None, username=None, password=None, debug_level=0):
+        """
+
+        :param obj: JIRA Issue data. VersatilaDict type or Dictionary
+        :param mapping: JIRA Field and JSON Path mapping dictionary or JIRAFieldsMap
+        :param base_url:
+        :param username:
+        :param password:
+        :param debug_level:
+        :return:
+        """
+
+        if obj:                                                             # if data is empty
+            if isinstance(obj, util.VersatileDict):
+                self._data = obj
+            else:
+                self._data = util.VersatileDict(obj)
+
+            if isinstance(mapping, JIRAFieldsMap):
+                self.map = mapping
+            else:
+                self.map = JIRAFieldsMap(mapping)
+
+            for field in mapping.keys():
+                v = self.map.value(field)
+                d = self._data.value(v)
+                setattr(self, field, d)
+
+        if base_url is not None:                                            # if don't want to initialize network
+            super().__init__(base_url, username, password, debug_level)     # Constructor of RESTNetwork
+
+    def set_data(self, obj, mapping=DEFAULT_JIRA_ISSUE_MAP):
+        self.__init__(obj, mapping)
