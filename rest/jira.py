@@ -249,7 +249,7 @@ class JIRAFactory(RESTNetwork):
         else:
             return None
 
-    def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description=""):
+    def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description="", args={}):
         """
         Create JIRA Issue.
 
@@ -261,27 +261,21 @@ class JIRAFactory(RESTNetwork):
         :param description:
         :return:
         """
-        req_body = """
-        {
-            "fields": {
-                "project":
-                {
-                    "key": "%s"
-                },
-                "summary": "%s",
-                "description": "%s",
-                "issuetype": {
-                    "name": "%s"
-                }
-            }
-        }
-        """ % (
-            project_id, summary.replace("\"", "'"),
-            description.replace("\"", "'").replace("\\", "\\\\").replace("\r","\\r").replace("\n","\\n").replace("\t", "\\t"),
-            issuetype)
+
+        req_body = util.VersatileDict()
+        req_body.add("fields/proejct/key", project_id)
+        req_body.add("fields/summary", summary.replace("\"", "'"))
+        req_body.add("fields/description", description.replace("\"", "'").replace("\\", "\\\\").replace("\r","\\r").replace("\n","\\n").replace("\t", "\\t"))
+        req_body.add("fields/issuetype/name", issuetype)
+
+        if len(args) > 0:
+            arg_list = list(args.keys())
+
+            for arg in arg_list:
+                req_body.add(arg, args[arg].replace("\\", "\\\\").replace("\r","\\r").replace("\n","\\n").replace("\t", "\\t"))
 
         self.log("Issue creation json data:\n", req_body)
-        self.set_post_body(req_body)
+        self.set_post_body(req_body.json())
 
         if self.httpHeaders is None:
             self.httpHeaders = {}
