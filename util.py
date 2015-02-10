@@ -1,17 +1,30 @@
 __author__ = 'chywoo.park'
 
+import json
+
+
+def is_number(data):
+    try:
+        int(data)
+        return True
+    except ValueError:
+        return False
 
 class VersatileDict:
     """
     Manipulate multiple layered multiple data type.
     """
-    data = None
+    _data = None
 
-    def __init__(self, obj):
+    def __init__(self, obj=None):
+        if obj is None:
+            self._data = None
+            return
+
         if isinstance(obj, self.__class__):
-            self.data = obj.data
+            self._data = obj._data
         else:
-            self.data = obj
+            self._data = obj
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -24,8 +37,75 @@ class VersatileDict:
             raise AttributeError("VersatileDict does not allow assignment to .data memeber.")
         self.__dict__[key] = value
 
-    def to_string(self):
-        return repr(data)
+    def __repr__(self):
+        if self._data is not None:
+            return json.dumps(self._data)
+        else:
+            return self
+
+    def add(self, keypath, value):
+        """
+        Add list or dictionary data with key path
+        :param keypath: data path. eg) 0/a/b/d
+        :param value: data to store
+        :return: Nothing
+        """
+        assert (keypath is not None and value is not None)
+
+        keys = keypath.split("/")
+
+        result = self._data
+        key_size = len(keys)
+
+        for i in range(key_size):
+            key = keys[i]
+            if keys[i] == '':
+                continue
+            print("--> Key : ", key)
+
+            if is_number(key):
+                key = int(key)
+                is_data_list = True
+            else:
+                is_data_list = False
+
+            # Initialize self._data
+            if self._data is None:
+                if is_data_list:     # if true, the first data is list
+                    result = []
+                else:
+                    result = {}                 # else, the first data is dictionary
+
+                self._data = result
+
+            if i + 1 == key_size:
+                if is_data_list:
+                    result.append(value)
+                else:
+                    result[key] = value
+
+                break
+
+            try:
+                result = result[key]
+            except KeyError:
+                if is_number(keys[i + 1]):
+                    result[key] = []
+                else:
+                    result[key] = {}
+                result = result[key]
+            except IndexError:
+                if is_number(keys[i + 1]):
+                    result.append([])
+                else:
+                    result.append({})
+
+                try:
+                    result = result[key]
+                except IndexError:
+                    raise KeyError("list key '%d' is not linear." % key)
+            except TypeError as e :
+                raise KeyError("Data type of the key is not match. %s" % e.args[0])
 
     def value(self, keystring=None):
         """
@@ -35,9 +115,9 @@ class VersatileDict:
         """
 
         if keystring is None:
-            return self.data
+            return self._data
 
-        result = self.data
+        result = self._data
 
         keys = keystring.split("/")
 
@@ -54,3 +134,6 @@ class VersatileDict:
                     raise KeyError("'%s' is not index value of List. Type of the value is List. Index must be integer." % key)
 
         return result
+
+    def json(self):
+        return json.dumps(self._data)
