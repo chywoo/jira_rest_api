@@ -249,6 +249,14 @@ class JIRAFactory(RESTNetwork):
         else:
             return None
 
+    def get_issue(self, idx):
+        """
+        Get issue object from searched issues by retrieve_search() method.
+        :param idx: index of searched issues
+        :return: instance of Issue class
+        """
+        return self._new_issue_object(self.value("issues/" + idx), self.get_mapping())
+
     def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description="", args={}):
         """
         Create JIRA Issue.
@@ -368,3 +376,17 @@ class Issue(RESTNetwork):
 
     def set_data(self, obj, mapping=DEFAULT_JIRA_ISSUE_MAP):
         self.__init__(obj, mapping)
+
+    def update_status(self, value):
+        """
+        Update issue status
+        :param value: new issue status
+        :return: HTTP code
+        """
+        self.set_resturl("/issue/%s/transitions", value.key)
+        req_body = util.VersatileDict()
+        req_body.add("update", {})
+        req_body.add("transition/id", value)
+
+        self.set_post_body(req_body.json())
+        return self.request_post()
