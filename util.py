@@ -61,7 +61,6 @@ class VersatileDict:
             key = keys[i]
             if keys[i] == '':
                 continue
-            print("--> Key : ", key)
 
             if is_number(key):
                 key = int(key)
