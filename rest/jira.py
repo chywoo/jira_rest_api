@@ -263,16 +263,20 @@ class JIRAFactory(RESTNetwork):
         """
 
         req_body = util.VersatileDict()
-        req_body.add("fields/proejct/key", project_id)
-        req_body.add("fields/summary", summary.replace("\"", "'"))
-        req_body.add("fields/description", description.replace("\"", "'").replace("\\", "\\\\").replace("\r","\\r").replace("\n","\\n").replace("\t", "\\t"))
+        req_body.add("fields/project/key", project_id)
+        req_body.add("fields/summary", summary)
+        req_body.add("fields/description", description)
         req_body.add("fields/issuetype/name", issuetype)
 
         if len(args) > 0:
             arg_list = list(args.keys())
 
             for arg in arg_list:
-                req_body.add(arg, args[arg].replace("\\", "\\\\").replace("\r","\\r").replace("\n","\\n").replace("\t", "\\t"))
+                if args[arg] is None:
+                    continue
+
+                self.log("Create issue arg => %s : %s" % (arg, args[arg]))
+                req_body.add(arg, args[arg])
 
         self.log("Issue creation json data:\n", req_body)
         self.set_post_body(req_body.json())
