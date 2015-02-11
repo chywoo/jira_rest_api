@@ -40,9 +40,9 @@ SCORE_JIRA_ISSUE_MAP = {
 #    "components": "/fields/components/{#}/name",
     "environment": "/fields/environment",
 #    "fixversions": "/fields/fixVersions/{#}/name",
-    "created": "/fields/created",
     "spin_id": "/fields/customfield_10100",
-    "spin_url": "/fields/customfield_10101"
+    "spin_url": "/fields/customfield_10101",
+    "spin_created":"/fields/customfield_10105"
 }
 
 # For issue creation and update
@@ -59,7 +59,7 @@ factory = jira.JIRAFactoryBuilder()
 source_factory = factory.get_factory(SRC_SERVER_BASE_URL, 'chywoo.park', 'score123')
 source_factory.set_proxy(PROXYS)
 
-target_factory = factory.get_factory(DST_SERVER_BASE_URL, 'chywoo.park', 'chywoo.park')
+target_factory = factory.get_factory(DST_SERVER_BASE_URL, 'robot', 'robot')
 
 startAt = 0
 total_count = 0
@@ -89,8 +89,8 @@ while loop:
 
     data = util.VersatileDict(source_factory.value())
 
-    total_count = 10 # int(data.value("total"))
-    data.data = data.value("issues")
+    total_count = int(data.value("total"))
+    data._data = data.value("issues")
 
     for i in range(100):
         if i + startAt >= total_count:
@@ -100,14 +100,18 @@ while loop:
         source_issue.set_data(data.value(str(i)), SPIN_JIRA_ISSUE_MAP)
 
         print("%d:%d  %s\t%-8s\t%s" % (i + startAt, i, source_issue.key, source_issue.issuetype, source_issue.summary))
-        args={
+        args = {
             SCORE_JIRA_ISSUE_MAP["spin_id"]: source_issue.key,
             SCORE_JIRA_ISSUE_MAP["spin_url"]: SRC_SERVER_BASE_URL + "/browse/" + source_issue.key,
-            SCORE_JIRA_ISSUE_MAP["environment"]: source_issue.environment,
-            SCORE_JIRA_ISSUE_MAP["created"]: source_issue.created
+            SCORE_JIRA_ISSUE_MAP["spin_created"]: source_issue.created,
+            SCORE_JIRA_ISSUE_MAP["environment"]: source_issue.environment
         }
 
-        result = target_factory.create_issue(project_id="TEST", summary=source_issue.summary, issuetype=source_issue.issuetype, description=source_issue.description, args=args)
+        result = target_factory.create_issue(project_id="TEST",
+                                             summary=source_issue.summary,
+                                             issuetype="Bug",
+                                             description=source_issue.description,
+                                             args=args)
         if result != 201:
             print("##### FAIL TO INSERT #####")
             print( target_factory.value() )
