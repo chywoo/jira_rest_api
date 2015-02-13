@@ -40,9 +40,10 @@ class RESTNetwork:
     proxies = None
 
     # HTTP Request variables
+    server_url = ""
     base_url = ""
     rest_url = None
-    httpHeaders = None
+    http_headers = {}
     post_body = None
     http_args = {}
 
@@ -77,17 +78,16 @@ class RESTNetwork:
         self.proxies = None
         self.proxies = proxy
 
-
-    def __init__(self, base_url, username, password, debug_level):
+    def __init__(self, server_url, username, password, debug_level):
         """
 
-        :param base_url:
+        :param server_url:
         :param username:
         :param password:
         :param debug_level: 1 - JIRA log, 2 - JIRA log + HTTP log
         :return:
         """
-        assert (base_url and username and password and base_url != "" and username != "" and password != "")
+        assert (server_url and username and password and server_url != "" and username != "" and password != "")
         assert (isinstance(username, str) and isinstance(password, str))
 
         self.jira_debug_level = debug_level
@@ -98,10 +98,11 @@ class RESTNetwork:
         self.rest_url = None
         self.post_body = None
         self.http_args = {}
+        self.http_headers = {}
 
         # Make connection to REST server. This is a JUST connection.
-        base_url.strip()
-        self.base_url = base_url + REST_API_URL_POSTFIX
+        self.server_url = server_url.strip()
+        self.base_url = self.server_url + REST_API_URL_POSTFIX
 
         # Initialize HTTP Response variables.
         self.res_body = None
@@ -134,12 +135,12 @@ class RESTNetwork:
             raise ConnectionError("Not initialized yet.")
 
         self.log("HTTP Request URL : " + self.base_url + self.rest_url)
-        self.log("HTTP Request headers :", self.httpHeaders)
+        self.log("HTTP Request headers :", self.http_headers)
 
         self.res_body = None
         self.res = requests.request(method=method,
                                     url=self.base_url + self.rest_url,
-                                    headers=self.httpHeaders,
+                                    headers=self.http_headers,
                                     auth=(self.username, self.password), params=self.http_args,
                                     data=self.post_body,
                                     proxies = self.proxies)
@@ -178,10 +179,10 @@ class RESTNetwork:
 class JIRAFactory(RESTNetwork):
     _fields_mapping = None
 
-    def __init__(self, base_url, username, password, mapping, debug_level):
+    def __init__(self, server_url, username, password, mapping, debug_level):
         self._fields_mapping = mapping
 
-        super().__init__(base_url, username, password, debug_level)
+        super().__init__(server_url, username, password, debug_level)
 
     def get_mapping(self):
         return self._fields_mapping
@@ -190,11 +191,11 @@ class JIRAFactory(RESTNetwork):
         self._fields_mapping = mapping
 
     def _new_issue_object(self):
-        _issue = Issue(self.base_url, self.username, self.password)
+        _issue = Issue(self.server_url, self.username, self.password)
         return _issue
 
     def _new_issue_object(self, obj, mapping):
-        _issue = Issue(obj, mapping, self.base_url, self.username, self.password)
+        _issue = Issue(obj, mapping, self.server_url, self.username, self.password)
         return _issue
 
     @property
@@ -255,7 +256,7 @@ class JIRAFactory(RESTNetwork):
         :param idx: index of searched issues
         :return: instance of Issue class
         """
-        return self._new_issue_object(self.value("issues/" + idx), self.get_mapping())
+        return self._new_issue_object(self.value("issues/%d" % idx), self.get_mapping())
 
     def create_issue(self, project_id, summary, issuetype, assignee=None, priority=None, description="", args={}):
         """
@@ -289,10 +290,7 @@ class JIRAFactory(RESTNetwork):
         self.log("Issue creation json data:\n", req_body)
         self.set_post_body(req_body.json())
 
-        if self.httpHeaders is None:
-            self.httpHeaders = {}
-
-        self.httpHeaders["Content-Type"] = "application/json"
+        self.http_headers["Content-Type"] = "application/json"
 
         self.set_resturl("/issue")
         status = self.request_post()
@@ -343,12 +341,12 @@ class Issue(RESTNetwork):
     Main function is to use JIRA field path as  property. eg) issue.key => issue.vale("fields/key")
     """
 
-    def __init__(self, obj=None, mapping=DEFAULT_JIRA_ISSUE_MAP, base_url=None, username=None, password=None, debug_level=0):
+    def __init__(self, obj=None, mapping=DEFAULT_JIRA_ISSUE_MAP, server_url=None, username=None, password=None, debug_level=0):
         """
 
         :param obj: JIRA Issue data. VersatilaDict type or Dictionary
         :param mapping: JIRA Field and JSON Path mapping dictionary or JIRAFieldsMap
-        :param base_url:
+        :param server_url:
         :param username:
         :param password:
         :param debug_level:
@@ -371,8 +369,8 @@ class Issue(RESTNetwork):
                 d = self._data.value(v)
                 setattr(self, field, d)
 
-        if base_url is not None:                                            # if don't want to initialize network
-            super().__init__(base_url, username, password, debug_level)     # Constructor of RESTNetwork
+        if server_url is not None:                                            # if don't want to initialize network
+            super().__init__(server_url, username, password, debug_level)     # Constructor of RESTNetwork
 
     def set_data(self, obj, mapping=DEFAULT_JIRA_ISSUE_MAP):
         self.__init__(obj, mapping)
@@ -383,7 +381,8 @@ class Issue(RESTNetwork):
         :param value: new issue status
         :return: HTTP code
         """
-        self.set_resturl("/issue/%s/transitions", value.key)
+        self.set_resturl("/issue/%s/transitions" % self.key)
+        self.http_headers["Content-Type"] = "application/json"
         req_body = util.VersatileDict()
         req_body.add("update", {})
         req_body.add("transition/id", value)
