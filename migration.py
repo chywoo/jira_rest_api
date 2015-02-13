@@ -88,19 +88,19 @@ def get_issues_status(factory):
         return None
 
 
-def init_issue_status(status_table):
+def init_issue_transition(status_table):
     mapping = {
-        "Open"       : status_table["Open"],
-        "In Progress": status_table["In Progress"],
-        "Reopened"   : status_table["Reopened"],
-        "Resolved"   : status_table["Resolved"],
-        "Closed"     : status_table["Closed"],
-        "OPENED"     : status_table["Open"],
-        "SUBMITTED"  : status_table["Open"],
-        "Done"       : status_table["Closed"],
-        "Confirmed"  : status_table["Open"],
-        "Rejected"   : status_table["Open"],
-        "Accepted"   : status_table["Open"]
+        "Open"       : "721",
+        "In Progress": "751",
+        "Reopened"   : "711",
+        "Resolved"   : "731",
+        "Closed"     : "741",
+        "OPENED"     : "721",
+        "SUBMITTED"  : "721",
+        "Done"       : "741",
+        "Confirmed"  : "721",
+        "Rejected"   : "711",
+        "Accepted"   : "721"
     }
 
     return mapping
@@ -156,7 +156,7 @@ def main():
         print("Fail to get issue status information. Can not be continued.")
         sys.exit(-1)
     else:
-        issue_status_map = init_issue_status(target_issue_status_table)
+        issue_status_map = init_issue_transition(target_issue_status_table)
 
     loop = True
     start_at = 0
@@ -193,23 +193,36 @@ def main():
             source_issue.set_data(data.value(str(i)), SPIN_JIRA_ISSUE_MAP)
             print("%4d:%2d %-10s " % (i + start_at, i, source_issue.key), end="")
 
-            exist_issue = find_issue_in_target(target_factory, source_issue)
+            existing_issue = find_issue_in_target(target_factory, source_issue)
 
-            if exist_issue:
-                print("%5s   " % "Y", end="")
-                result = exist_issue.update_status(issue_status_map[source_issue.issuestatus])
-                if result == 204:
-                    print("Updated %-10s %s" % (target_factory.value("key"), source_issue.issuestatus))
-                else:
-                    print("Failed  %-10s $s" % ("ERROR", exist_issue.value("errorMessages/0")))
-            else:
+            if not existing_issue:
+                # Phase 2-1. Create issue
                 print("%5s   " % "N", end="")
+
                 result = create_in_target(target_factory, source_issue)
 
                 if result == 201:
-                    print("Created %-10s %s" % (target_factory.value("key"), source_issue.summary))
+                    print("Created %-10s %s" % (target_factory.value("key"), source_issue.summary), end="")
+
+                    # Update issue status because issue status is "Open" at creation.
+                    existing_issue = find_issue_in_target(target_factory, source_issue)
+                    if existing_issue:
+                        result = existing_issue.update_status(issue_status_map[source_issue.issuestatus])
+                        if result == 204:
+                            print("[FAIL TO UPDATE ISSUE STATUS]", end="")
+
+                    print()
                 else:
                     print("Failed  %-10s $s" % ("ERROR", target_factory.value("errorMessages/0")))
+            else:
+                # Phase 2-2. Update existing issue
+                print("%5s   " % "Y", end="")
+                result = existing_issue.update_status(issue_status_map[source_issue.issuestatus])
+                if result == 204:
+                    print("Updated %-10s %s" % (existing_issue.key, source_issue.issuestatus))
+                else:
+                    print("Failed  %-10s $s" % ("ERROR", existing_issue.value("errorMessages/0")))
+
 
         start_at += JQL_MAX_RESULTS
 
