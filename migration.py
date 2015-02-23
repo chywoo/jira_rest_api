@@ -223,11 +223,20 @@ def main():
                 else:
                     print("Failed  %-10s $s" % ("ERROR", existing_issue.value("errorMessages/0")))
 
-
         start_at += JQL_MAX_RESULTS
 
     print("END" * 10)
 
 
+def print_usage():
+    print("Usage: python3 migration.py <source jira HTTP URL> <target jira HTTP URL>")
+    print("       ex) migration.py http://100.100.100.1/jira http://100.100.100.2:8080\n")
+
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print_usage()
+    else:
+        SRC_SERVER_BASE_URL = sys.argv[1]
+        DST_SERVER_BASE_URL = sys.argv[2]
+
+        main()
