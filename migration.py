@@ -1,15 +1,18 @@
 __author__ = 'chywoo.park'
 
 import sys
+sys.path.append("./rest")
 import jira
 import util
+import argparse
 
-SRC_SERVER_BASE_URL = "http://168.219.209.56/jira"
+
+SRC_SERVER_BASE_URL = ""
 PROXYS = {
     'http':'http://172.21.17.105:3128',
     'https': 'http://172.21.17.105:3128'
 }
-DST_SERVER_BASE_URL = "http://172.21.17.95:8080"
+DST_SERVER_BASE_URL = ""
 DST_PROJECT = "SPIN"
 
 SPIN_JIRA_ISSUE_MAP = {
@@ -232,11 +235,24 @@ def print_usage():
     print("Usage: python3 migration.py <source jira HTTP URL> <target jira HTTP URL>")
     print("       ex) migration.py http://100.100.100.1/jira http://100.100.100.2:8080\n")
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print_usage()
-    else:
-        SRC_SERVER_BASE_URL = sys.argv[1]
-        DST_SERVER_BASE_URL = sys.argv[2]
 
-        main()
+# Main code
+if len(sys.argv) < 2:
+    print_usage()
+    sys.exit(1)
+
+parser = argparse.ArgumentParser(description='JIRA Migration tool')
+parser.add_argument('--proxy-src', type=str, help='Set proxy for source JIRA.')
+parser.add_argument('--proxy-dst', type=str, help='Set proxy for destination JIRA.')
+parser.add_argument('src_jira', type=str, help='Source Jira URL')
+parser.add_argument('target_jira', type=str, help="Target Jira URL")
+
+args = parser.parse_args(['migration.py', '--proxy-src==abc', 'http'])
+
+print(args.jiraSrc)
+
+# SRC_SERVER_BASE_URL = sys.argv[1]
+# DST_SERVER_BASE_URL = sys.argv[2]
+
+
+#main()
