@@ -1,6 +1,8 @@
 __author__ = 'chywoo.park'
 
 import sys
+sys.path.append('./rest')
+sys.path.append('.')
 import jira
 import util
 
@@ -9,7 +11,7 @@ PROXYS = {
     'http':'http://172.21.17.105:3128',
     'https': 'http://172.21.17.105:3128'
 }
-DST_SERVER_BASE_URL = "http://172.21.17.95:8080"
+DST_SERVER_BASE_URL = "http://jira.score"
 DST_PROJECT = "SPIN"
 
 SPIN_JIRA_ISSUE_MAP = {
@@ -26,6 +28,10 @@ SPIN_JIRA_ISSUE_MAP = {
     "created": "/fields/created"
 }
 
+CUSTOM_SPIN_ID = "customfield_10608"
+CUSTOM_SPIN_URL = "customfield_10610"
+CUSTOM_SPIN_CREATED = "customfield_10607"
+
 # For issue view
 SCORE_JIRA_ISSUE_MAP = {
     "issuetype": "/fields/issuetype/name",
@@ -38,20 +44,10 @@ SCORE_JIRA_ISSUE_MAP = {
 #    "components": "/fields/components/{#}/name",
     "environment": "/fields/environment",
 #    "fixversions": "/fields/fixVersions/{#}/name",
-    "spin_id": "/fields/customfield_10100",
-    "spin_url": "/fields/customfield_10101",
-    "spin_created":"/fields/customfield_10105"
+    "spin_id": "/fields/" + CUSTOM_SPIN_ID,
+    "spin_url": "/fields/" + CUSTOM_SPIN_URL,
+    "spin_created": "/fields/" + CUSTOM_SPIN_CREATED
 }
-
-# For issue creation and update
-SCORE_JIRA_CUSTOM_FIELDS = {
-    "spind_id": "customfield_10100",
-    "spind_url": "customfield_10101"
-}
-
-
-CUSTOM_SPIN_ID = "customfield_10100"
-CUSTOM_SPIN_URL = "customfield_10101"
 
 
 SPIN_JQL = 'project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF") AND issuetype in (Bug, DEFECT) AND filter = "S-Core(PSLab) Config_User"'
@@ -88,21 +84,45 @@ def get_issues_status(factory):
         return None
 
 
-def init_issue_transition(status_table):
-    mapping = {
-        "Open"       : "721",
-        "In Progress": "751",
-        "Reopened"   : "711",
-        "Resolved"   : "731",
-        "Closed"     : "741",
-        "OPENED"     : "721",
-        "SUBMITTED"  : "721",
-        "Done"       : "741",
-        "Confirmed"  : "721",
-        "Rejected"   : "711",
-        "Accepted"   : "721"
-    }
+def init_issue_transition():
+    """
+    Mapping transition ID for table issue status.
 
+    The keys are from source Jira and values are transition IDs from target Jira.
+    When source issue status is changed, we should use transition ID for appropriate target issue status.
+    :param status_table:
+    :return:
+    """
+
+    # For test Jira
+    # mapping = {
+    #     "Open"       : "721",
+    #     "In Progress": "751",
+    #     "Reopened"   : "711",
+    #     "Resolved"   : "731",
+    #     "Closed"     : "741",
+    #     "OPENED"     : "721",
+    #     "SUBMITTED"  : "721",
+    #     "Done"       : "741",
+    #     "Confirmed"  : "721",
+    #     "Rejected"   : "711",
+    #     "Accepted"   : "721"
+    # }
+
+    # For S-Core Jira
+    mapping = {
+        "Open"       : "711",
+        "In Progress": "751",
+        "Reopened"   : "741",
+        "Resolved"   : "721",
+        "Closed"     : "731",
+        "OPENED"     : "711",
+        "SUBMITTED"  : "711",
+        "Done"       : "731",
+        "Confirmed"  : "711",
+        "Rejected"   : "721",
+        "Accepted"   : "711"
+    }
     return mapping
 
 
@@ -149,14 +169,14 @@ def main():
 
     source_factory = factory.get_factory(SRC_SERVER_BASE_URL, 'chywoo.park', 'score123')
     source_factory.set_proxy(PROXYS)
-    target_factory = factory.get_factory(DST_SERVER_BASE_URL, 'robot', 'robot')
+    target_factory = factory.get_factory(DST_SERVER_BASE_URL, 'chywoo.park', 'tizensdk*10')
 
     target_issue_status_table = get_issues_status(target_factory)
     if target_issue_status_table is None:
         print("Fail to get issue status information. Can not be continued.")
         sys.exit(-1)
     else:
-        issue_status_map = init_issue_transition(target_issue_status_table)
+        issue_status_map = init_issue_transition()  # Currently target_issue_status_table is not used.
 
     loop = True
     start_at = 0
@@ -213,7 +233,8 @@ def main():
 
                     print()
                 else:
-                    print("Failed  %-10s $s" % ("ERROR", target_factory.value("errorMessages/0")))
+                    errormessage = target_factory.value()
+                    print("Failed  %-10s " % ("ERROR"), errormessage['errors'])
             else:
                 # Phase 2-2. Update existing issue
                 print("%5s   " % "Y", end="")
@@ -221,7 +242,8 @@ def main():
                 if result == 204:
                     print("Updated %-10s %s" % (existing_issue.key, source_issue.issuestatus))
                 else:
-                    print("Failed  %-10s $s" % ("ERROR", existing_issue.value("errorMessages/0")))
+                    errormessage = target_factory.value()
+                    print("Failed  %-10s " % ("ERROR"), errormessage['errors'])
 
         start_at += JQL_MAX_RESULTS
 
@@ -240,3 +262,4 @@ if __name__ == "__main__":
         DST_SERVER_BASE_URL = sys.argv[2]
 
         main()
+
