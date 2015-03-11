@@ -389,3 +389,27 @@ class Issue(RESTNetwork):
 
         self.set_post_body(req_body.json())
         return self.request_post()
+
+    def assign(self, user, user_map=None):
+        """
+        Assign issue to specific user.
+        :param user:
+        :param user_map: map table between source jira and target jira. This is only used when 'user' is in this map table.
+        :return:
+        """
+
+        self.set_resturl("/issue/%s/assignee" % self.key)
+        self.http_headers["Content-Type"] = "application/json"
+
+        if user_map is not None:
+            try:
+                tmp = user_map[user]
+                user = tmp
+            except KeyError:
+                pass
+
+        req_body = util.VersatileDict()
+        req_body.add("name", user)
+
+        self.set_post_body(req_body.json())
+        return self.request("put")
