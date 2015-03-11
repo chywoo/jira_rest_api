@@ -160,7 +160,17 @@ def main():
                 # Phase 2-2. Update existing issue
                 print("%5s   " % "Y", end="")
                 result = existing_issue.update_status(DataMap.ISSUE_TRANSITION_ID[source_issue.issuestatus])
-                result_assign = existing_issue.assign(source_issue.assignee)
+
+                user = source_issue.assignee
+
+                try:
+                    tmp = DataMap.USER_MAP[user]
+                    user = tmp
+                except KeyError:
+                    pass
+
+                result_assign = existing_issue.assign(user)
+
                 if result == 204 and result_assign == 204:
                     print("Updated %-10s %s" % (existing_issue.key, source_issue.issuestatus))
                 elif result == 204 and result_assign == 400:
