@@ -154,30 +154,43 @@ def main():
 
                     print()
                 else:
-                    errormessage = target_factory.value()
-                    print("CR-Fail  %-10s " % ("ERROR"), errormessage['errorMessages'])
+                    errmsg = target_factory.value()
+                    print("CR-Fail  %-10s " % ("ERROR"), errmsg['errorMessages'])
             else:
                 # Phase 2-2. Update existing issue
+                result_issue_status = 0
+                result_assign = 0
+
                 print("%5s   " % "Y", end="")
-                result = existing_issue.update_status(DataMap.ISSUE_TRANSITION_ID[source_issue.issuestatus])
 
-                user = source_issue.assignee
+                target_status = DataMap.get_issue_status(source_issue.issuestatus)
 
-                try:
-                    tmp = DataMap.USER_MAP[user]
-                    user = tmp
-                except KeyError:
-                    pass
+                if existing_issue.issuestatus != target_status:
+                    target_transition_id = DataMap.get_transition_id(source_issue.issuestatus)
+                    result_issue_status = existing_issue.update_status(target_transition_id)
 
-                result_assign = existing_issue.assign(user)
+                    if result_issue_status == 204:
+                        print("STS: %s -> %s " % (existing_issue.issuestatus, target_status), end="")
+                    else:
+                        errmsg = existing_issue.value()
+                        print("STS: [%s] " % (errmsg['errors']), end="")
 
-                if result == 204 and result_assign == 204:
-                    print("Updated %-10s %s" % (existing_issue.key, source_issue.issuestatus))
-                elif result == 204 and result_assign == 400:
-                    print("Updated %-10s %s. Fail to assign to %s" % (existing_issue.key, source_issue.issuestatus, source_issue.assignee))
-                else:
-                    errormessage = target_factory.value()
-                    print("Failed  %-10s " % ("ERROR"), errormessage['errors'])
+                assigned_user = DataMap.get_user(source_issue.assignee)
+
+                if existing_issue.assignee != assigned_user:
+                    result_assign = existing_issue.assign(assigned_user)
+
+                    if result_assign == 204:
+                        print("USR: %s -> %s " % (existing_issue.assignee, assigned_user), end="")
+                    else:
+                        errmsg = existing_issue.value()
+                        print("USR: [%s] " % (errmsg['errors']), end="")
+
+
+                if result_assign == 0 and result_issue_status == 0:
+                    print("No change", end="")
+
+                print("")
 
         start_at += JQL_MAX_RESULTS
 
