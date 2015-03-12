@@ -47,6 +47,32 @@ class DataMap:
     USER_MAP = {
     }
 
+    def get_user(src_user):
+        if DataMap.USER_MAP.__len__() == 0:
+            return src_user
+        else:
+            try:
+                return DataMap.USER_MAP[src_user]
+            except KeyError:
+                return src_user
+
+    # Issue status mapping table from source jira to target jira
+    ISSUE_STATUS_MAP = {
+        "Open"       : "Open",
+        "OPENED"     : "Open",
+        "SUBMITTED"  : "Open",
+        "Accepted"   : "Open",
+        "Confirmed"  : "Open",
+        "Resolved"   : "Resolved",
+        "Closed"     : "Closed",
+        "Done"       : "Closed",
+        "In Progress": "In Progress",
+        "Reopened"   : "Reopened"
+    }
+
+    def get_issue_status(src_status):
+        return DataMap.ISSUE_STATUS_MAP[src_status]
+
     ISSUE_TRANSITION_ID = {
         "Open"       : "721",
         "In Progress": "751",
@@ -61,4 +87,10 @@ class DataMap:
         "Accepted"   : "721"
     }
 
+    def get_transition_id(to_status):
+        return DataMap.ISSUE_TRANSITION_ID[to_status]
+
     SPIN_JQL = 'project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF") AND issuetype in (Bug, DEFECT) AND filter = "S-Core(PSLab) Config_User"'
+
+    def get_jql():
+        return DataMap.SPIN_JQL
