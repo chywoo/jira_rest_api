@@ -77,10 +77,10 @@ def create_in_target(factory, issue):
 
     # Set additional fields
     args = {
-        DataMap.SCORE_JIRA_ISSUE_MAP["spin_id"]: issue.key,
-        DataMap.SCORE_JIRA_ISSUE_MAP["spin_url"]: SRC_SERVER_BASE_URL + "/browse/" + issue.key,
-        DataMap.SCORE_JIRA_ISSUE_MAP["spin_created"]: issue.created,
-        DataMap.SCORE_JIRA_ISSUE_MAP["environment"]: issue.environment
+        DataMap.TARGET_JIRA_ISSUE_MAP["spin_id"]: issue.key,
+        DataMap.TARGET_JIRA_ISSUE_MAP["spin_url"]: SRC_SERVER_BASE_URL + "/browse/" + issue.key,
+        DataMap.TARGET_JIRA_ISSUE_MAP["spin_created"]: issue.created,
+        DataMap.TARGET_JIRA_ISSUE_MAP["environment"]: issue.environment
     }
 
     return factory.create_issue(project_id=DST_PROJECT, summary=issue.summary, issuetype="Bug", description=issue.description, args=args)
@@ -111,7 +111,7 @@ def main():
         print("="*80)
 
         # Phase 1. Get issues from SPIN
-        source_factory.retrieve_search(jql=DataMap.SPIN_JQL, max_results=JQL_MAX_RESULTS, start_at=start_at)
+        source_factory.retrieve_search(jql=DataMap.get_jql(), max_results=JQL_MAX_RESULTS, start_at=start_at)
 
         if source_factory.http_status != 200:
             print("Fail to get issues from SPIN")
@@ -148,7 +148,7 @@ def main():
                     # Update issue status because issue status is "Open" at creation.
                     existing_issue = find_issue_in_target(target_factory, source_issue)
                     if existing_issue:
-                        result = existing_issue.update_status(DataMap.ISSUE_TRANSITION_ID[source_issue.issuestatus])
+                        result = existing_issue.update_status(DataMap.get_transition_id(source_issue.issuestatus))
                         if result == 204:
                             print("[FAIL TO UPDATE ISSUE STATUS]", end="")
 

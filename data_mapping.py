@@ -27,7 +27,7 @@ class DataMap:
     CUSTOM_SPIN_CREATED = "customfield_10105"
 
     # For issue view
-    SCORE_JIRA_ISSUE_MAP = {
+    TARGET_JIRA_ISSUE_MAP = {
         "issuetype": "/fields/issuetype/name",
         "issuestatus": "/fields/status/name",
         "key": "/key",
