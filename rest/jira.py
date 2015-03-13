@@ -353,7 +353,7 @@ class Issue(RESTNetwork):
         :return:
         """
 
-        if obj:                                                             # if data is empty
+        if obj:
             if isinstance(obj, util.VersatileDict):
                 self._data = obj
             else:
@@ -365,9 +365,12 @@ class Issue(RESTNetwork):
                 self.map = JIRAFieldsMap(mapping)
 
             for field in mapping.keys():
-                v = self.map.value(field)
-                d = self._data.value(v)
-                setattr(self, field, d)
+                try:
+                    v = self.map.value(field)
+                    d = self._data.value(v)
+                    setattr(self, field, d)
+                except KeyError:                                              # Some key is absent in some project. Skip it.
+                    pass
 
         if server_url is not None:                                            # if don't want to initialize network
             super().__init__(server_url, username, password, debug_level)     # Constructor of RESTNetwork
