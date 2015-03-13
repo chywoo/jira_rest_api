@@ -63,6 +63,7 @@ class DataMap:
         "SUBMITTED"  : "Open",
         "Accepted"   : "Open",
         "Confirmed"  : "Open",
+        "To Do"      : "Open",
         "Resolved"   : "Resolved",
         "Closed"     : "Closed",
         "Done"       : "Closed",
@@ -81,6 +82,7 @@ class DataMap:
         "Closed"     : "741",
         "OPENED"     : "721",
         "SUBMITTED"  : "721",
+        "To Do"      : "721",
         "Done"       : "741",
         "Confirmed"  : "721",
         "Rejected"   : "711",
@@ -90,7 +92,7 @@ class DataMap:
     def get_transition_id(to_status):
         return DataMap.ISSUE_TRANSITION_ID[to_status]
 
-    SPIN_JQL = 'project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF") AND issuetype in (Bug, DEFECT) AND filter = "S-Core(PSLab) Config_User"'
+    SPIN_JQL = '( ( project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF") AND issuetype in (Bug, DEFECT) ) OR (project = SDKRM and issuetype in (Task, Defect)) ) AND filter = "S-Core(PSLab) Config_User"'
 
     def get_jql():
         return DataMap.SPIN_JQL
