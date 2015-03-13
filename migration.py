@@ -83,7 +83,12 @@ def create_in_target(factory, issue):
         DataMap.TARGET_JIRA_ISSUE_MAP["environment"]: issue.environment
     }
 
-    return factory.create_issue(project_id=DST_PROJECT, summary=issue.summary, issuetype="Bug", description=issue.description, args=args)
+    target_issuetype="Bug"
+
+    if issue.issuetype == "Task":
+        target_issuetype = "Task"
+
+    return factory.create_issue(project_id=DST_PROJECT, summary=issue.summary, issuetype=target_issuetype, description=issue.description, args=args)
 
 
 def main():
