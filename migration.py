@@ -18,7 +18,7 @@ from data_mapping import DataMap
 
 
 JQL_MAX_RESULTS = 100
-
+UNASSIGNED_USER = "robot"   # This 'robot' ID is used as 'Unassigned user'
 
 def get_issues_status(factory):
     """
@@ -142,7 +142,7 @@ def main():
             existing_issue = find_issue_in_target(target_factory, source_issue)
 
             if not existing_issue:
-                # Phase 2-1. Create issue
+                # Phase 1. Create issue
                 print("%5s   " % "N", end="")
 
                 result = create_in_target(target_factory, source_issue)
@@ -152,50 +152,53 @@ def main():
 
                     # Update issue status because issue status is "Open" at creation.
                     existing_issue = find_issue_in_target(target_factory, source_issue)
-                    if existing_issue:
-                        result = existing_issue.update_status(DataMap.get_transition_id(source_issue.issuestatus))
-                        if result == 204:
-                            print("[FAIL TO UPDATE ISSUE STATUS]", end="")
-
-                    print()
+                    if not existing_issue:
+                        print("CR-Fail: ABNORMALLY ISSUE CREATED]", end="")
+                        continue
                 else:
                     errmsg = target_factory.value()
                     print("CR-Fail  %-10s " % ("ERROR"), errmsg['errorMessages'])
-            else:
-                # Phase 2-2. Update existing issue
-                result_issue_status = 0
-                result_assign = 0
+                    continue
 
-                print("%5s   " % "Y", end="")
+            result_issue_status = 0
+            result_assign = 0
 
-                target_status = DataMap.get_issue_status(source_issue.issuestatus)
+            print("%5s   " % "Y", end="")
 
-                if existing_issue.issuestatus != target_status:
-                    target_transition_id = DataMap.get_transition_id(source_issue.issuestatus)
-                    result_issue_status = existing_issue.update_status(target_transition_id)
+            # Phase 2. Update issue status
 
-                    if result_issue_status == 204:
-                        print("STS: %s -> %s " % (existing_issue.issuestatus, target_status), end="")
-                    else:
-                        errmsg = existing_issue.value()
-                        print("STS: [%s] " % (errmsg['errors']), end="")
+            target_status = DataMap.get_issue_status(source_issue.issuestatus)
 
-                assigned_user = DataMap.get_user(source_issue.assignee)
+            if existing_issue.issuestatus != target_status:
+                target_transition_id = DataMap.get_transition_id(source_issue.issuestatus)
+                result_issue_status = existing_issue.update_status(target_transition_id)
 
-                if existing_issue.assignee != assigned_user:
-                    result_assign = existing_issue.assign(assigned_user)
+                if result_issue_status == 204:
+                    print("STS: %s -> %s " % (existing_issue.issuestatus, target_status), end="")
+                else:
+                    errmsg = existing_issue.value()
+                    print("STS: [%s] " % (errmsg['errors']), end="")
 
-                    if result_assign == 204:
-                        print("USR: %s -> %s " % (existing_issue.assignee, assigned_user), end="")
-                    else:
-                        errmsg = existing_issue.value()
-                        print("USR: [%s] " % (errmsg['errors']), end="")
+            # Phase 3. Change assignee
+
+            assigned_user = DataMap.get_user(source_issue.assignee)
+
+            if existing_issue.assignee != assigned_user:
+                result_assign = existing_issue.assign(assigned_user)
+
+                if result_assign == 204:
+                    print("USR: %s -> %s " % (existing_issue.assignee, assigned_user), end="")
+                else:
+                    errmsg = existing_issue.value()
+                    print("USR: [%s] " % (errmsg['errors']), end="")
+
+                    result_assign = existing_issue.assign(UNASSIGNED_USER)
 
 
-                if result_assign == 0 and result_issue_status == 0:
-                    print("No change", end="")
+            if result_assign == 0 and result_issue_status == 0:
+                print("No change", end="")
 
-                print("")
+            print("")
 
         start_at += JQL_MAX_RESULTS
 
