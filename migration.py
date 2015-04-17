@@ -91,29 +91,21 @@ def create_in_target(factory, issue):
     return factory.create_issue(project_id=DST_PROJECT, summary=issue.summary, issuetype=target_issuetype, description=issue.description, args=args)
 
 
-def main():
-    # Initialize
-    factory = jira.JIRAFactoryBuilder()
-
-    source_factory = factory.get_factory(SRC_SERVER_BASE_URL, DataMap.SRC_JIRA_USER_ID, DataMap.SRC_JIRA_USER_PWD)
-    source_factory.set_proxy(PROXYS)
-    target_factory = factory.get_factory(DST_SERVER_BASE_URL, DataMap.DST_JIRA_USER_ID, DataMap.DST_JIRA_USER_PWD)
-
-    target_issue_status_table = get_issues_status(target_factory)
-    if target_issue_status_table is None:
-        print("Fail to get issue status information. Can not be continued.")
-        sys.exit(-1)
-
+def issue_migration(source_factory, target_factory):
+    """
+    Issue migration part. In this function, all issue of source jira are copied to target jira,
+    and issue status and assignee are changed.
+    :param source_factory:
+    :param target_factory:
+    :return:
+    """
     loop = True
     start_at = 0
-
     source_issue = jira.Issue()
-
-    #     No.  SPIN-Key Exist  Action   New Key, Summary
+    # No.  SPIN-Key Exist  Action   New Key, Summary
     print("%7s %-10s %-5s   %-8s %-10s %s" % ("No.", "SPIN-key", "Exist", "Action", "New-key", "Summary"))
-
     while loop:
-        print("="*80)
+        print("=" * 80)
 
         # Phase 1. Get issues from SPIN
         source_factory.retrieve_search(jql=DataMap.get_jql(), max_results=JQL_MAX_RESULTS, start_at=start_at)
@@ -174,10 +166,10 @@ def main():
                 result_issue_status = existing_issue.update_status(target_transition_id)
 
                 if result_issue_status == 204:
-                    print("STS: %s -> %s " % (existing_issue.issuestatus, target_status), end="")
+                    print("STA: %s -> %s " % (existing_issue.issuestatus, target_status), end="")
                 else:
                     errmsg = existing_issue.value()
-                    print("STS: [%s] " % (errmsg['errors']), end="")
+                    print("STA: [%s] " % (errmsg['errors']), end="")
 
             # Phase 3. Change assignee
 
@@ -194,13 +186,32 @@ def main():
 
                     result_assign = existing_issue.assign(UNASSIGNED_USER)
 
-
             if result_assign == 0 and result_issue_status == 0:
                 print("No change", end="")
 
             print("")
 
         start_at += JQL_MAX_RESULTS
+
+
+def main():
+    # Initialize
+    factory = jira.JIRAFactoryBuilder()
+
+    source_factory = factory.get_factory(SRC_SERVER_BASE_URL, DataMap.SRC_JIRA_USER_ID, DataMap.SRC_JIRA_USER_PWD)
+    source_factory.set_proxy(PROXYS)
+    target_factory = factory.get_factory(DST_SERVER_BASE_URL, DataMap.DST_JIRA_USER_ID, DataMap.DST_JIRA_USER_PWD)
+
+    target_issue_status_table = get_issues_status(target_factory)
+    if target_issue_status_table is None:
+        print("Fail to get issue status information. Can not be continued.")
+        sys.exit(-1)
+
+    # Migrate issues.
+    issue_migration(source_factory, target_factory)
+
+    # Assign issues not for s-core to 'robot'
+
 
     print("END" * 10)
 
