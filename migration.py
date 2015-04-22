@@ -73,6 +73,30 @@ def find_issue_in_target(factory, issue):
         raise LookupError("There is many issues about SPIN key %s." % issue.key)
 
 
+def find_issue_in_source(factory, issue):
+    """
+    Find a issue with issue key in Key field.
+    :param factory: Instance of JIRAFactory class for target JIRA
+    :param issue: Issue information. Instance of Issue class
+    :return: None - Nothing, instance of Issue class - Issue data
+    """
+    check_jql = 'key = %s' % (issue.spin_id)
+
+    r = factory.retrieve_search(check_jql, 0, 1)
+
+    if r is None:
+        raise ConnectionError("Fail to check if issue exist. Http status %d, %s" % (factory.http_status, factory.value("errorMessages/0")))
+
+    cnt = int(factory.value("total"))
+
+    if cnt == 0:
+        return None
+    elif cnt == 1:
+        return factory.get_issue(0)
+    else:
+        raise LookupError("There is many issues about SPIN key %s." % issue.key)
+
+
 def create_in_target(factory, issue):
 
     # Set additional fields
@@ -194,13 +218,85 @@ def issue_migration(source_factory, target_factory):
         start_at += JQL_MAX_RESULTS
 
 
+def migration_post_work(source_factory, target_factory):
+    """
+    :param source_factory:
+    :param target_factory:
+    :return:
+    """
+    loop = True
+    start_at = 0
+    changed_count = 0
+
+    print (" #### POST WORKD ####")
+    # No.    Inter-key     SPIN-key    Summary
+    print("%7s %-10s %-10s %s" % ("No.", "Inter-key", "SPIN-key", "Action"))
+
+    while loop:
+        print("=" * 80)
+
+        # Phase 1. Get issues from Target
+        target_factory.retrieve_search(jql=DataMap.get_target_assigned_issue_jql(), max_results=JQL_MAX_RESULTS,
+                                       start_at=start_at)
+
+        if target_factory.http_status != 200:
+            print("Fail to get issues from Target")
+            sys.exit(-1)
+
+        data = util.VersatileDict(target_factory.value())
+
+        total_count = int(data.value("total"))
+        data._data = data.value("issues")
+
+        # Phase 2. Find existing issue
+        for i in range(JQL_MAX_RESULTS):
+
+            # Exit loop condition
+            if i + start_at >= total_count:
+                loop = False
+                break
+
+            # Make issue instance for convenience
+            target_issue = target_factory._new_issue_object(data.value(str(i)), DataMap.TARGET_JIRA_ISSUE_MAP)
+            print("%4d:%2d %-10s  %-10s " % (i + start_at, i, target_issue.key, target_issue.spin_id), end="")
+
+            found_issue = find_issue_in_source(source_factory, target_issue)
+
+            if not found_issue:
+                new_assignee = "robot"
+            elif DataMap.get_user(found_issue.assignee) != target_issue.assignee:
+                new_assignee = DataMap.get_user(found_issue.assignee)
+            else:
+                new_assignee = None
+
+            if new_assignee is not None:
+                changed_count += 1
+
+                result = target_issue.assign(new_assignee)
+                if result == 204:
+                    print("USR: %s -> %s " % (target_issue.assignee, new_assignee), end="")
+                else:
+                    errmsg = target_issue.value()
+                    print("Assign Fail. ", errmsg['errorMessages'], end="")
+
+            print("")
+
+        start_at += JQL_MAX_RESULTS
+
+    print("")
+    print("Total changed: %d" % (changed_count))
+
+
 def main():
     # Initialize
     factory = jira.JIRAFactoryBuilder()
 
     source_factory = factory.get_factory(SRC_SERVER_BASE_URL, DataMap.SRC_JIRA_USER_ID, DataMap.SRC_JIRA_USER_PWD)
+    source_factory.set_permission(jira.PERMISSION_READ)
     source_factory.set_proxy(PROXYS)
+
     target_factory = factory.get_factory(DST_SERVER_BASE_URL, DataMap.DST_JIRA_USER_ID, DataMap.DST_JIRA_USER_PWD)
+    target_factory.set_permission(jira.PERMISSION_WRITE)
 
     target_issue_status_table = get_issues_status(target_factory)
     if target_issue_status_table is None:
@@ -210,7 +306,9 @@ def main():
     # Migrate issues.
     issue_migration(source_factory, target_factory)
 
-    # Assign issues not for s-core to 'robot'
+    print ("")
+    # Migration post work
+    migration_post_work(source_factory, target_factory)
 
 
     print("END" * 10)

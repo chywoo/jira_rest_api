@@ -6,7 +6,7 @@ class DataMap:
     SRC_JIRA_USER_PWD="score123"
 
     DST_JIRA_USER_ID="robot"
-    DST_JIRA_USER_PWD="robot"
+    DST_JIRA_USER_PWD="score123"
 
     SPIN_JIRA_ISSUE_MAP = {
         "issuetype": "/fields/issuetype/name",
@@ -49,7 +49,7 @@ class DataMap:
 
     def get_user(src_user):
         if DataMap.USER_MAP.__len__() == 0:
-            return src_user
+            return 'robot'
         else:
             try:
                 return DataMap.USER_MAP[src_user]
@@ -93,6 +93,10 @@ class DataMap:
         return DataMap.ISSUE_TRANSITION_ID[to_status]
 
     SPIN_JQL = '( ( project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF", "Tizen 2.4 Release" ) AND issuetype in (Bug, DEFECT) ) OR (project = SDKRM and issuetype in (Task, Defect)) ) AND filter = "S-Core(PSLab) Config_User"'
+    TARGET_ASSIGNED_ISSUE_JQL = 'project = SPIN and assignee  != robot and status not in ( closed )'
 
     def get_jql():
         return DataMap.SPIN_JQL
+
+    def get_target_assigned_issue_jql():
+        return DataMap.TARGET_ASSIGNED_ISSUE_JQL

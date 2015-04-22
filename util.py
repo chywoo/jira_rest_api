@@ -120,6 +120,7 @@ class VersatileDict:
 
         keys = keystring.split("/")
 
+
         for key in keys:
             if key == '': # skip blank ex)first '/' at '/fields/description'
                 continue
