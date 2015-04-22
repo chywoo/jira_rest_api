@@ -53,6 +53,12 @@ class RESTNetwork:
 
     jira_debug_level = 0
 
+    # Policy
+    PERMISSION_READ  = 0x000001
+    PERMISSION_WRITE = 0x000010
+
+    _permission = PERMISSION_READ
+
     def log(self, *args):
         """
         Debug log if jira_debug_level > 0
@@ -66,6 +72,21 @@ class RESTNetwork:
                 print(message, end=' ')
 
             print()
+
+    def set_permission(self, permission):
+        self._permission = permission
+
+    def is_readable(self):
+        if self._permission & self.PERMISSION_READ == self.PERMISSION_READ:
+            return True
+        else:
+            return False
+
+    def is_writable(self):
+        if self._permission & self.PERMISSION_WRITE == self.PERMISSION_WRITE:
+            return True
+        else:
+            return False
 
     def set_post_body(self, body):
         """
@@ -271,6 +292,9 @@ class JIRAFactory(RESTNetwork):
         :return:
         """
 
+        if self.is_writable() is False:
+            raise PermissionError("Not writable")
+
         req_body = util.VersatileDict()
         req_body.add("fields/project/key", project_id)
         req_body.add("fields/summary", summary)
@@ -384,6 +408,10 @@ class Issue(RESTNetwork):
         :param value: new issue status
         :return: HTTP code
         """
+
+        if self.is_writable() is False:
+            raise PermissionError("Not writable")
+
         self.set_resturl("/issue/%s/transitions" % self.key)
         self.http_headers["Content-Type"] = "application/json"
         req_body = util.VersatileDict()
@@ -399,6 +427,9 @@ class Issue(RESTNetwork):
         :param user:
         :return:
         """
+
+        if self.is_writable() is False:
+            raise PermissionError("Not writable")
 
         self.set_resturl("/issue/%s/assignee" % self.key)
         self.http_headers["Content-Type"] = "application/json"
