@@ -25,6 +25,10 @@ DEFAULT_JIRA_ISSUE_MAP = {
     "created": "/fields/created"
 }
 
+# Policy
+PERMISSION_READ  = 0x000001
+PERMISSION_WRITE = 0x000010
+
 
 class RESTNetwork:
     """
@@ -53,10 +57,6 @@ class RESTNetwork:
 
     jira_debug_level = 0
 
-    # Policy
-    PERMISSION_READ  = 0x000001
-    PERMISSION_WRITE = 0x000010
-
     _permission = PERMISSION_READ
 
     def log(self, *args):
@@ -77,13 +77,13 @@ class RESTNetwork:
         self._permission = permission
 
     def is_readable(self):
-        if self._permission & self.PERMISSION_READ == self.PERMISSION_READ:
+        if self._permission & PERMISSION_READ == PERMISSION_READ:
             return True
         else:
             return False
 
     def is_writable(self):
-        if self._permission & self.PERMISSION_WRITE == self.PERMISSION_WRITE:
+        if self._permission & PERMISSION_WRITE == PERMISSION_WRITE:
             return True
         else:
             return False
@@ -99,7 +99,7 @@ class RESTNetwork:
         self.proxies = None
         self.proxies = proxy
 
-    def __init__(self, server_url, username, password, debug_level):
+    def __init__(self, server_url, username, password, permission, debug_level):
         """
 
         :param server_url:
@@ -111,6 +111,7 @@ class RESTNetwork:
         assert (server_url and username and password and server_url != "" and username != "" and password != "")
         assert (isinstance(username, str) and isinstance(password, str))
 
+        self.set_permission(permission)
         self.jira_debug_level = debug_level
 
         self.username = username
@@ -203,7 +204,8 @@ class JIRAFactory(RESTNetwork):
     def __init__(self, server_url, username, password, mapping, debug_level):
         self._fields_mapping = mapping
 
-        super().__init__(server_url, username, password, debug_level)
+        super().__init__(server_url=server_url, username=username, password=password, permission=PERMISSION_READ,
+                         debug_level=debug_level)
 
     def get_mapping(self):
         return self._fields_mapping
@@ -211,12 +213,8 @@ class JIRAFactory(RESTNetwork):
     def set_mapping(self, mapping):
         self._fields_mapping = mapping
 
-    def _new_issue_object(self):
-        _issue = Issue(self.server_url, self.username, self.password)
-        return _issue
-
     def _new_issue_object(self, obj, mapping):
-        _issue = Issue(obj, mapping, self.server_url, self.username, self.password)
+        _issue = Issue(obj, mapping, self.server_url, self.username, self.password, self._permission)
         return _issue
 
     @property
@@ -365,7 +363,8 @@ class Issue(RESTNetwork):
     Main function is to use JIRA field path as  property. eg) issue.key => issue.vale("fields/key")
     """
 
-    def __init__(self, obj=None, mapping=DEFAULT_JIRA_ISSUE_MAP, server_url=None, username=None, password=None, debug_level=0):
+    def __init__(self, obj=None, mapping=DEFAULT_JIRA_ISSUE_MAP, server_url=None, username=None, password=None,
+                 permission=PERMISSION_READ, debug_level=0):
         """
 
         :param obj: JIRA Issue data. VersatilaDict type or Dictionary
@@ -388,16 +387,17 @@ class Issue(RESTNetwork):
             else:
                 self.map = JIRAFieldsMap(mapping)
 
-            for field in mapping.keys():
+            for field in mapping.keys():                   # set key names to attributes
                 try:
                     v = self.map.value(field)
                     d = self._data.value(v)
                     setattr(self, field, d)
-                except KeyError:                                              # Some key is absent in some project. Skip it.
+                except KeyError:                           # Some key is absent in some project. Skip it.
                     pass
 
-        if server_url is not None:                                            # if don't want to initialize network
-            super().__init__(server_url, username, password, debug_level)     # Constructor of RESTNetwork
+        if server_url is not None:                         # if don't want to initialize network
+            super().__init__(server_url=server_url, username=username, password=password, permission=permission,
+                             debug_level=debug_level)      # Constructor of RESTNetwork
 
     def set_data(self, obj, mapping=DEFAULT_JIRA_ISSUE_MAP):
         self.__init__(obj, mapping)
