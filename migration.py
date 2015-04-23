@@ -260,12 +260,20 @@ def migration_post_work(source_factory, target_factory):
             target_issue = target_factory._new_issue_object(data.value(str(i)), DataMap.TARGET_JIRA_ISSUE_MAP)
             print("%4d:%2d %-10s  %-10s " % (i + start_at, i, target_issue.key, target_issue.spin_id), end="")
 
-            found_issue = find_issue_in_source(source_factory, target_issue)
+            if target_issue.spin_id is None:
+                print("Invalid Issue. SPIN ID is none. Skip")
+                continue
+
+            try:
+                found_issue = find_issue_in_source(source_factory, target_issue)
+            except ConnectionError as err:
+                print(err, end="")
+                found_issue = None
 
             if not found_issue:
                 new_assignee = "robot"
             elif DataMap.get_user(found_issue.assignee) != target_issue.assignee:
-                new_assignee = DataMap.get_user(found_issue.assignee)
+                new_assignee = "robot"  # if assignees are different, assign to robot
             else:
                 new_assignee = None
 
@@ -278,6 +286,8 @@ def migration_post_work(source_factory, target_factory):
                 else:
                     errmsg = target_issue.value()
                     print("Assign Fail. ", errmsg['errorMessages'], end="")
+            else:
+                print("Skip", end="")
 
             print("")
 
