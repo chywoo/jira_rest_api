@@ -9,38 +9,37 @@ class DataMap:
     DST_JIRA_USER_PWD="score123"
 
     SPIN_JIRA_ISSUE_MAP = {
-        "issuetype": "/fields/issuetype/name",
-        "issuestatus": "/fields/status/name",
-        "key": "/key",
-        "assignee": "/fields/assignee/name",
-        "displayname": "/fields/assignee/displayName",
-        "summary": "/fields/summary",
-        "description": "/fields/description",
-    #    "components": "/fields/components/{#}/name",
-        "environment": "/fields/environment",
-    #    "fixversions": "/fields/fixVersions/{#}/name",
-        "created": "/fields/created"
+        "issuetype"     : "/fields/issuetype/name",
+        "issuestatus"   : "/fields/status/name",
+        "key"           : "/key",
+        "assignee"      : "/fields/assignee/name",
+        "displayname"   : "/fields/assignee/displayName",
+        "summary"       : "/fields/summary",
+        "description"   : "/fields/description",
+        "environment"   : "/fields/environment",
+        "created"       : "/fields/created",
+        "resolutiondate": "/fields/resolutiondate"
     }
 
     CUSTOM_SPIN_ID = "customfield_10100"
     CUSTOM_SPIN_URL = "customfield_10101"
     CUSTOM_SPIN_CREATED = "customfield_10105"
+    CUSTOM_SPIN_RESOLVED = "customfield_10200"
 
     # For issue view
     TARGET_JIRA_ISSUE_MAP = {
-        "issuetype": "/fields/issuetype/name",
-        "issuestatus": "/fields/status/name",
-        "key": "/key",
-        "assignee": "/fields/assignee/name",
-        "displayname": "/fields/assignee/displayName",
-        "summary": "/fields/summary",
-        "description": "/fields/description",
-    #    "components": "/fields/components/{#}/name",
-        "environment": "/fields/environment",
-    #    "fixversions": "/fields/fixVersions/{#}/name",
-        "spin_id": "/fields/" + CUSTOM_SPIN_ID,
-        "spin_url": "/fields/" + CUSTOM_SPIN_URL,
-        "spin_created": "/fields/" + CUSTOM_SPIN_CREATED
+        "issuetype"     : "/fields/issuetype/name",
+        "issuestatus"   : "/fields/status/name",
+        "key"           : "/key",
+        "assignee"      : "/fields/assignee/name",
+        "displayname"   : "/fields/assignee/displayName",
+        "summary"       : "/fields/summary",
+        "description"   : "/fields/description",
+        "environment"   : "/fields/environment",
+        "spin_id"       : "/fields/" + CUSTOM_SPIN_ID,
+        "spin_url"      : "/fields/" + CUSTOM_SPIN_URL,
+        "spin_created"  : "/fields/" + CUSTOM_SPIN_CREATED,
+        "spin_resolved" : "/fields/" + CUSTOM_SPIN_RESOLVED
     }
 
     # For assignee mapping. This is for case that user name is different from single ID.
@@ -92,7 +91,7 @@ class DataMap:
     def get_transition_id(to_status):
         return DataMap.ISSUE_TRANSITION_ID[to_status]
 
-    SPIN_JQL = 'project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF", "Tizen 2.4 Release", "Tizen 2.3.1 Platform Release", "Tizen SDK Tools") AND issuetype in (Bug, DEFECT, Task, Defect) AND filter = "S-Core(PSLab) Config_User"'
+    SPIN_JQL = 'project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF", "Tizen 2.4 Release", "Tizen 2.3.1 Platform Release", "Tizen SDK Tools") AND issuetype in (Bug, DEFECT, Task, Defect) AND status not in ( Closed, Done ) AND filter = "S-Core(PSLab) Config_User"'
     TARGET_ASSIGNED_ISSUE_JQL = 'project = SPIN and assignee  != robot and status not in ( closed )'
 
     def get_jql():
