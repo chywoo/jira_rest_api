@@ -183,15 +183,15 @@ def issue_migration(source_factory, target_factory):
 
             # Phase 2. Update issue status
 
-            target_status = DataMap.get_issue_status(source_issue.issuestatus)
+            source_status = DataMap.get_issue_status(source_issue.issuestatus)
 
-            if existing_issue.issuestatus != target_status:
-                target_transition_id = DataMap.get_transition_id(source_issue.issuestatus)
-                result_issue_status = existing_issue.update_status(target_transition_id)
+            if existing_issue.issuestatus != source_status:
+                new_transition_id = DataMap.get_transition_id(source_issue.issuestatus)
+                result_issue_status = existing_issue.update_status(new_transition_id)
 
                 if result_issue_status == 204:
-                    print("STA: %s -> %s " % (existing_issue.issuestatus, target_status), end="")
-                else:
+                    print("STA: %s -> %s " % (existing_issue.issuestatus, source_status), end="")
+                else
                     errmsg = existing_issue.value()
                     print("STA: [%s] " % (errmsg['errors']), end="")
 
