@@ -152,7 +152,7 @@ def issue_migration(source_factory, target_factory):
                 break
 
             # Make issue instance for convenience
-            source_issue.set_data(data.value(str(i)), DataMap.SPIN_JIRA_ISSUE_MAP)
+            source_issue.set_data(data.value(str(i)))
             print("%4d:%2d %-10s " % (i + start_at, i, source_issue.key), end="")
 
             existing_issue = find_issue_in_target(target_factory, source_issue)
@@ -161,9 +161,9 @@ def issue_migration(source_factory, target_factory):
                 # Phase 1. Create issue
                 print("%5s   " % "N", end="")
 
-                result = create_in_target(target_factory, source_issue)
+                result_resolved = create_in_target(target_factory, source_issue)
 
-                if result == 201:
+                if result_resolved == 201:
                     print("Created %-10s %s" % (target_factory.value("key"), source_issue.summary), end="")
 
                     # Update issue status because issue status is "Open" at creation.
@@ -191,7 +191,11 @@ def issue_migration(source_factory, target_factory):
 
                 if result_issue_status == 204:
                     print("STA: %s -> %s " % (existing_issue.issuestatus, source_status), end="")
-                else
+
+                    if source_status == "Resolved":
+                        if existing_issue.update_spin_resolved(source_issue.resolutiondate) == 204:
+                            print("with Resolved Date", end="")
+                else:
                     errmsg = existing_issue.value()
                     print("STA: [%s] " % (errmsg['errors']), end="")
 
@@ -228,7 +232,11 @@ def migration_post_work(source_factory, target_factory):
     start_at = 0
     changed_count = 0
 
-    print (" #### POST WORKD ####")
+    print (" ####################")
+    print (" #### POST WORKS ####")
+    print (" ####################")
+    print()
+    print (" #### Processing issues not assigned to S-Core ####\n")
     # No.    Inter-key     SPIN-key    Summary
     print("%7s %-10s %-10s %s" % ("No.", "Inter-key", "SPIN-key", "Action"))
 
@@ -257,7 +265,7 @@ def migration_post_work(source_factory, target_factory):
                 break
 
             # Make issue instance for convenience
-            target_issue = target_factory._new_issue_object(data.value(str(i)), DataMap.TARGET_JIRA_ISSUE_MAP)
+            target_issue = target_factory._new_issue_object(data.value(str(i)))
             print("%4d:%2d %-10s  %-10s " % (i + start_at, i, target_issue.key, target_issue.spin_id), end="")
 
             if target_issue.spin_id is None:
@@ -270,6 +278,7 @@ def migration_post_work(source_factory, target_factory):
                 print(err, end="")
                 found_issue = None
 
+            # Phase 3. Change assignee
             if not found_issue:
                 new_assignee = "robot"
             elif DataMap.get_user(found_issue.assignee) != target_issue.assignee:
@@ -287,9 +296,9 @@ def migration_post_work(source_factory, target_factory):
                     errmsg = target_issue.value()
                     print("Assign Fail. ", errmsg['errorMessages'], end="")
             else:
-                print("Skip", end="")
+                print("Skip ", end="")
 
-            print("")
+            # print("")
 
         start_at += JQL_MAX_RESULTS
 
@@ -301,11 +310,13 @@ def main():
     # Initialize
     factory = jira.JIRAFactoryBuilder()
 
-    source_factory = factory.get_factory(SRC_SERVER_BASE_URL, DataMap.SRC_JIRA_USER_ID, DataMap.SRC_JIRA_USER_PWD)
+    source_factory = factory.get_factory(SRC_SERVER_BASE_URL, DataMap.SRC_JIRA_USER_ID, DataMap.SRC_JIRA_USER_PWD,
+                                         DataMap.SPIN_JIRA_ISSUE_MAP)
     source_factory.set_permission(jira.PERMISSION_READ)
     source_factory.set_proxy(PROXYS)
 
-    target_factory = factory.get_factory(DST_SERVER_BASE_URL, DataMap.DST_JIRA_USER_ID, DataMap.DST_JIRA_USER_PWD)
+    target_factory = factory.get_factory(DST_SERVER_BASE_URL, DataMap.DST_JIRA_USER_ID, DataMap.DST_JIRA_USER_PWD,
+                                         DataMap.TARGET_JIRA_ISSUE_MAP)
     target_factory.set_permission(jira.PERMISSION_WRITE)
 
     target_issue_status_table = get_issues_status(target_factory)
