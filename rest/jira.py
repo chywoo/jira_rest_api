@@ -11,18 +11,17 @@ import util
 
 REST_API_URL_POSTFIX = "/rest/api/latest"
 
-DEFAULT_JIRA_ISSUE_MAP = {
-    "issuetype": "/fields/issuetype/name",
-    "issuestatus": "/fields/status/name",
-    "key": "/key",
-    "assignee": "/fields/assignee/name",
-    "displayname": "/fields/assignee/displayName",
-    "summary": "/fields/summary",
-    "description": "/fields/description",
-#    "components": "/fields/components/{#}/name",
-    "environment": "/fields/environment",
-#    "fixversions": "/fields/fixVersions/{#}/name",
-    "created": "/fields/created"
+DEFAULT_JIRA_FIELDS_MAP = {
+    "issuetype"     : "/fields/issuetype/name",
+    "issuestatus"   : "/fields/status/name",
+    "key"           : "/key",
+    "assignee"      : "/fields/assignee/name",
+    "displayname"   : "/fields/assignee/displayName",
+    "summary"       : "/fields/summary",
+    "description"   : "/fields/description",
+    "environment"   : "/fields/environment",
+    "created"       : "/fields/created",
+    "resolutiondate": "/fields/resolutiondate"
 }
 
 # Policy
@@ -199,6 +198,15 @@ class RESTNetwork:
 
 
 class JIRAFactory(RESTNetwork):
+    """
+    JIRAFactory is map to a Jira server. Therefore, this contains following functions.
+    * Issue field mapping table. Default is DEFAULT_JIRA_ISSUE_MAP
+    * Read/Write Permission
+    * make empty instance of Issue class.
+    * Retrieve issue list, which is not instances of Issue class but JSON data.
+    * Get a issue data from a retrieved issue list.
+    * Create a Jira issue.
+    """
     _fields_mapping = None
 
     def __init__(self, server_url, username, password, mapping, debug_level):
@@ -335,13 +343,13 @@ class JIRAFactoryBuilder:
         """
         self.debug_level = debug_level
 
-    def get_factory(self, url, username, password, mapping=DEFAULT_JIRA_ISSUE_MAP):
+    def get_factory(self, url, username, password, mapping=DEFAULT_JIRA_FIELDS_MAP):
         return JIRAFactory(url, username, password, mapping, self.debug_level)
 
 
 class JIRAFieldsMap:
     """
-    Map field name and REST api path.
+    Map between field name and REST api path.
     See DEFAULT_JIRA-ISSUE_MAP. It is a sample.
     """
     def __init__(self, map):
@@ -363,7 +371,7 @@ class Issue(RESTNetwork):
     Main function is to use JIRA field path as  property. eg) issue.key => issue.vale("fields/key")
     """
 
-    def __init__(self, obj=None, mapping=DEFAULT_JIRA_ISSUE_MAP, server_url=None, username=None, password=None,
+    def __init__(self, obj=None, mapping=DEFAULT_JIRA_FIELDS_MAP, server_url=None, username=None, password=None,
                  permission=PERMISSION_READ, debug_level=0):
         """
 
@@ -399,8 +407,36 @@ class Issue(RESTNetwork):
             super().__init__(server_url=server_url, username=username, password=password, permission=permission,
                              debug_level=debug_level)      # Constructor of RESTNetwork
 
-    def set_data(self, obj, mapping=DEFAULT_JIRA_ISSUE_MAP):
+    def set_data(self, obj, mapping=DEFAULT_JIRA_FIELDS_MAP):
+        """
+        Set data to issue internal data.
+        :param obj:
+        :param mapping: Jira
+        :return: Nothing
+        """
         self.__init__(obj, mapping)
+
+    def _update_field(self, key, value):
+        """
+        Update field data
+        :param value: field API path. ex) /fields/custom_1104
+        :return: HTTP code
+        """
+
+        if self.is_writable() is False:
+            raise PermissionError("Not writable")
+
+        self.set_resturl("/issue/%s" % self.key)
+        self.http_headers["Content-Type"] = "application/json"
+        req_body = util.VersatileDict()
+        req_body.add(key, value)
+
+        self.set_post_body(req_body.json())
+        return self.request("put")
+
+    def update_spin_resolved(self, value):
+        self.spin_resolved = value
+        return self._update_field(self.map.value("spin_resolved"), self.spin_resolved)
 
     def update_status(self, value):
         """
