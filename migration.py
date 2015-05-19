@@ -161,9 +161,9 @@ def issue_migration(source_factory, target_factory):
                 # Phase 1. Create issue
                 print("%5s   " % "N", end="")
 
-                result_resolved = create_in_target(target_factory, source_issue)
+                result_create = create_in_target(target_factory, source_issue)
 
-                if result_resolved == 201:
+                if result_create == 201:
                     print("Created %-10s %s" % (target_factory.value("key"), source_issue.summary), end="")
 
                     # Update issue status because issue status is "Open" at creation.
@@ -186,15 +186,18 @@ def issue_migration(source_factory, target_factory):
             source_status = DataMap.get_issue_status(source_issue.issuestatus)
 
             if existing_issue.issuestatus != source_status:
+                result_resolve = 0
+                if source_status == "Closed":
+                    result_resolve = existing_issue.update_spin_resolved(source_issue.resolutiondate)
+
                 new_transition_id = DataMap.get_transition_id(source_issue.issuestatus)
                 result_issue_status = existing_issue.update_status(new_transition_id)
 
                 if result_issue_status == 204:
                     print("STA: %s -> %s " % (existing_issue.issuestatus, source_status), end="")
 
-                    if source_status == "Resolved":
-                        if existing_issue.update_spin_resolved(source_issue.resolutiondate) == 204:
-                            print("with Resolved Date", end="")
+                    if result_resolve == 204:
+                        print("with Resolved Date", end="")
                 else:
                     errmsg = existing_issue.value()
                     print("STA: [%s] " % (errmsg['errors']), end="")
@@ -265,7 +268,7 @@ def migration_post_work(source_factory, target_factory):
                 break
 
             # Make issue instance for convenience
-            target_issue = target_factory._new_issue_object(data.value(str(i)))
+            target_issue = target_factory._new_issue_object(data.value(str(i)), DataMap.TARGET_JIRA_ISSUE_MAP)
             print("%4d:%2d %-10s  %-10s " % (i + start_at, i, target_issue.key, target_issue.spin_id), end="")
 
             if target_issue.spin_id is None:
@@ -298,7 +301,7 @@ def migration_post_work(source_factory, target_factory):
             else:
                 print("Skip ", end="")
 
-            # print("")
+            print("")
 
         start_at += JQL_MAX_RESULTS
 
