@@ -91,7 +91,7 @@ class DataMap:
     def get_transition_id(to_status):
         return DataMap.ISSUE_TRANSITION_ID[to_status]
 
-    SPIN_JQL = 'project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF", "Tizen 2.4 Release", "Tizen 2.3.1 Platform Release", "Tizen SDK Tools") AND issuetype in (Bug, DEFECT, Task, Defect) AND filter = "S-Core(PSLab) Config_User"'
+    SPIN_JQL = 'project in ("Tizen 2.3 Release", "Tizen 2.3 Source Release", "Tizen SDK TF", "Tizen 2.4 Release", "Tizen 2.3.1 Platform Release", "Tizen SDK Tools") AND issuetype in (Bug, DEFECT, Task, Defect) AND updated >= "-1d" AND filter = "S-Core(PSLab) Config_User"'
     TARGET_ASSIGNED_ISSUE_JQL = 'project = SPIN'
 
     def get_jql():
