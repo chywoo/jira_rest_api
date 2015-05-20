@@ -301,6 +301,17 @@ def migration_post_work(source_factory, target_factory):
             else:
                 print("Skip ", end="")
 
+            # Phase 4. Change issue status. In fact, this phase  is not necessary work, but convenient work for viewing
+            found_issue_status = DataMap.get_issue_status(found_issue.issuestatus)
+            if found_issue_status != target_issue.issuestatus:
+                target_transition_id = DataMap.get_transition_id(found_issue.issuestatus)
+                result_issue_status = target_issue.update_status(target_transition_id)
+
+                if result_issue_status == 204:
+                    print("STA: %s -> %s " % (target_issue.issuestatus, found_issue_status), end="")
+                else:
+                    errmsg = target_issue.value()
+                    print("STA: [%s] " % (errmsg['errors']), end="")
             print("")
 
         start_at += JQL_MAX_RESULTS
