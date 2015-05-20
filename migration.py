@@ -209,6 +209,7 @@ def issue_migration(source_factory, target_factory):
             if existing_issue.assignee != assigned_user:
                 result_assign = existing_issue.assign(assigned_user)
 
+
                 if result_assign == 204:
                     print("USR: %s -> %s " % (existing_issue.assignee, assigned_user), end="")
                 else:
