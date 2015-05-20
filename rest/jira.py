@@ -16,7 +16,7 @@ DEFAULT_JIRA_FIELDS_MAP = {
     "issuestatus"   : "/fields/status/name",
     "key"           : "/key",
     "assignee"      : "/fields/assignee/name",
-    "displayname"   : "/fields/assignee/displayName",
+    "reporter"      : "/fields/reporter/name",
     "summary"       : "/fields/summary",
     "description"   : "/fields/description",
     "environment"   : "/fields/environment",

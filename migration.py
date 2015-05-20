@@ -205,10 +205,11 @@ def issue_migration(source_factory, target_factory):
             # Phase 3. Change assignee
 
             assigned_user = DataMap.get_user(source_issue.assignee)
+            reporter = DataMap.get_user(source_issue.reporter)
 
-            if existing_issue.assignee != assigned_user:
+            if existing_issue.assignee != assigned_user and \
+                    (assigned_user != reporter or source_status not in ("Resolved", "Closed")):
                 result_assign = existing_issue.assign(assigned_user)
-
 
                 if result_assign == 204:
                     print("USR: %s -> %s " % (existing_issue.assignee, assigned_user), end="")
