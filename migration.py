@@ -104,7 +104,7 @@ def create_in_target(factory, issue):
         DataMap.TARGET_JIRA_ISSUE_MAP["spin_id"]: issue.key,
         DataMap.TARGET_JIRA_ISSUE_MAP["spin_url"]: SRC_SERVER_BASE_URL + "/browse/" + issue.key,
         DataMap.TARGET_JIRA_ISSUE_MAP["spin_created"]: issue.created,
-        DataMap.TARGET_JIRA_ISSUE_MAP["environment"]: issue.environment
+        DataMap.TARGET_JIRA_ISSUE_MAP["environment"]: getattr(issue, "environment", None)
     }
 
     target_issuetype="Bug"
@@ -181,8 +181,7 @@ def issue_migration(source_factory, target_factory):
 
             print("%5s   " % "Y", end="")
 
-            # Phase 2. Update issue status
-
+            # Phase 3. Update issue status
             source_status = DataMap.get_issue_status(source_issue.issuestatus)
 
             if existing_issue.issuestatus != source_status:
@@ -202,8 +201,7 @@ def issue_migration(source_factory, target_factory):
                     errmsg = existing_issue.value()
                     print("STA: [%s] " % (errmsg['errors']), end="")
 
-            # Phase 3. Change assignee
-
+            # Phase 4. Change assignee
             assigned_user = DataMap.get_user(source_issue.assignee)
             reporter = DataMap.get_user(source_issue.reporter)
 
