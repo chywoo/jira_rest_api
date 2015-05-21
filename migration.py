@@ -205,17 +205,19 @@ def issue_migration(source_factory, target_factory):
             assigned_user = DataMap.get_user(source_issue.assignee)
             reporter = DataMap.get_user(source_issue.reporter)
 
-            if existing_issue.assignee != assigned_user and \
-                    (assigned_user != reporter or source_status not in ("Resolved", "Closed")):
-                result_assign = existing_issue.assign(assigned_user)
-
-                if result_assign == 204:
-                    print("USR: %s -> %s " % (existing_issue.assignee, assigned_user), end="")
+            if existing_issue.assignee != assigned_user:
+                if assigned_user == reporter and source_status in ("Resolved", "Closed"):
+                    print("USR: skip reassign bcz auto-reassign.", end="")
                 else:
-                    errmsg = existing_issue.value()
-                    print("USR: [%s] " % (errmsg['errors']), end="")
+                    result_assign = existing_issue.assign(assigned_user)
 
-                    result_assign = existing_issue.assign(UNASSIGNED_USER)
+                    if result_assign == 204:
+                        print("USR: %s -> %s " % (existing_issue.assignee, assigned_user), end="")
+                    else:
+                        errmsg = existing_issue.value()
+                        print("USR: [%s] " % (errmsg['errors']), end="")
+                        # if fail to assign, try to assign to unassigned user.
+                        result_assign = existing_issue.assign(UNASSIGNED_USER)
 
             if result_assign == 0 and result_issue_status == 0:
                 print("No change", end="")
